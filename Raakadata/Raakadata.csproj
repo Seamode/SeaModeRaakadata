@@ -94,5 +94,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RaakadataLibrary\RaakadataLibrary.csproj">
+      <Project>{d5a4744a-d940-43ef-86b4-65ac10c8be94}</Project>
+      <Name>RaakadataLibrary</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
