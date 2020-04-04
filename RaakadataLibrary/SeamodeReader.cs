@@ -6,7 +6,7 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace SeaModeReadWrite
+namespace RaakadataLibrary
 {
     class SeamodeReader
     {
@@ -45,7 +45,7 @@ namespace SeaModeReadWrite
                 if (Regex.IsMatch(fi.Name, startPattern) && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == pit)
                     filekset.Add(fi.FullName);
                 if (outDire == null)
-                    outDire = new String(fi.DirectoryName);
+                    outDire = new String(fi.DirectoryName.ToCharArray());
             }
 
             return filekset;
