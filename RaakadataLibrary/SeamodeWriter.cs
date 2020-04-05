@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace SeaModeReadWrite
+namespace RaakadataLibrary
 {
     // Kirjoitetaan valikoidut rivit yhdistelmätiedostoon.
     class SeamodeWriter
