@@ -23,6 +23,8 @@ namespace Raakadata
     /// </summary>
     public partial class MainWindow : Window
     {
+        private int alkuAikaPituus;
+        private int loppuAikaPituus;
         public MainWindow()
         {
             InitializeComponent();
@@ -52,9 +54,7 @@ namespace Raakadata
         {
             var fd = new VistaFolderBrowserDialog();
             if (fd.ShowDialog(this).GetValueOrDefault())
-            {
                 tbTallennusPolku.Text = fd.SelectedPath;
-            }
         }
 
         private void BtnLuoKisaTiedosto_Click(object sender, RoutedEventArgs e)
@@ -64,8 +64,23 @@ namespace Raakadata
                 MessageBox.Show("Please select start and end dates for the race.");
                 return;
             }
+            if (textBoxStart.Text == "HH:mm:ss" || textBoxEnd.Text == "HH:mm:ss")
+            {
+                MessageBox.Show("Please select start and end times for the race.");
+                return;
+            }
             DateTime alku = (DateTime)dpAlkuPvm.SelectedDate;
+            string[] alkuAika = textBoxStart.Text.Split(':');
+            alku = alku
+                .AddHours(int.Parse(alkuAika[0]))
+                .AddMinutes(int.Parse(alkuAika[1]))
+                .AddSeconds(int.Parse(alkuAika[2]));
             DateTime loppu = (DateTime)dpLoppuPvm.SelectedDate;
+            string[] loppuAika = textBoxStart.Text.Split(':');
+            loppu = loppu
+                .AddHours(int.Parse(loppuAika[0]))
+                .AddMinutes(int.Parse(loppuAika[1]))
+                .AddSeconds(int.Parse(loppuAika[2]));
             if (loppu <= alku)
             {
                 MessageBox.Show("Check the dates and times.\nRace start must be before the ending.");
@@ -98,11 +113,27 @@ namespace Raakadata
         private void TbAika_TextChanged(object sender, TextChangedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
-            if (tb.Text == "HH.mm:ss" || String.IsNullOrEmpty(tb.Text))
+            if (tb.Text == "HH:mm:ss" || String.IsNullOrEmpty(tb.Text))
                 return;
             int pituus = tb.Text.Length;
+            if (tb == textBoxStart && pituus < alkuAikaPituus)
+            {
+                tb.Text.Remove(pituus - 1);
+                alkuAikaPituus = tb.Text.Length;
+                tb.SelectionStart = tb.Text.Length;
+                KisaTiedostoPolku();
+                return;
+            }
+            else if (tb == textBoxEnd && pituus < loppuAikaPituus)
+            {
+                tb.Text.Remove(pituus - 1);
+                loppuAikaPituus = tb.Text.Length;
+                tb.SelectionStart = tb.Text.Length;
+                KisaTiedostoPolku();
+                return;
+            }
             if (pituus != 3 && pituus != 6 && !char.IsDigit(tb.Text, pituus - 1))
-                tb.Text = tb.Text.Substring(0, pituus - 1);
+                tb.Text.Remove(pituus - 1);
             switch (pituus)
             {
                 case 1:
@@ -130,16 +161,18 @@ namespace Raakadata
                     break;
             }
             tb.SelectionStart = tb.Text.Length;
+            if (tb == textBoxStart)
+                alkuAikaPituus = tb.Text.Length;
+            else if (tb == textBoxEnd)
+                loppuAikaPituus = tb.Text.Length;
             KisaTiedostoPolku();
         }
 
         private void TbAika_GotFocus(object sender, RoutedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
-            if (tb.Text == "HH.mm:ss")
-            {
-                tb.Clear(); 
-            }
+            if (tb.Text == "HH:mm:ss")
+                tb.Clear();
         }
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
@@ -153,7 +186,13 @@ namespace Raakadata
         private void TbAika_LostFocus(object sender, RoutedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
-
+            if (String.IsNullOrEmpty(tb.Text))
+            {
+                tb.Text = "HH:mm:ss";
+                return;
+            }
+            string fill = "00:00:00";
+            tb.Text += fill.Substring(tb.Text.Length);
         }
     }
 }
