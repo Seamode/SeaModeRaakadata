@@ -83,43 +83,54 @@ namespace Raakadata
             BtnLuoKisaTiedosto.IsEnabled = true;
         }
 
-        private void TbKilpailuNimi_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            string aika = textBoxStart == null ? "" : String.Join("", textBoxStart.Text.Split(':'));
-            tbKilpaTiedostoPolku.Text = $"{tbTallennusPolku.Text}\\SeaMODE_{dpAlkuPvm.DisplayDate:yyyyMMdd}_{aika}_{tbKilpailuNimi.Text}.csv";
-        }
+        private void TbKisaTiedostoPolku_TextChanged(object sender, TextChangedEventArgs e) 
+            => KisaTiedostoPolku();
 
-        private void TbTallennusPolku_TextChanged(object sender, TextChangedEventArgs e)
+        private void KisaTiedostoPolku()
         {
-            string nimi = tbKilpailuNimi == null ? "" : tbKilpailuNimi.Text;
-            if (tbKilpaTiedostoPolku != null)
-            {
-                string aika = textBoxStart == null ? "" : String.Join("", textBoxStart.Text.Split(':'));
-                tbKilpaTiedostoPolku.Text = $"{tbTallennusPolku.Text}\\SeaMODE_{dpAlkuPvm.DisplayDate:yyyyMMdd}_{aika}_{nimi}.csv";
-            }
+            string polku = tbTallennusPolku == null ? "<Path>" : tbTallennusPolku.Text;
+            string pvm = dpAlkuPvm == null ? "<Date>" : $"{dpAlkuPvm.DisplayDate:yyyyMMdd}";
+            string aika = textBoxStart == null ? "<Time>" : String.Join("", textBoxStart.Text.Split(':'));
+            string nimi = String.IsNullOrEmpty(tbKilpailuNimi.Text) ? "<RaceName>" : tbKilpailuNimi.Text;
+            tbKilpaTiedostoPolku.Text = $"{polku}\\SeaMODE_{pvm}_{aika}_{nimi}.csv";
         }
 
         private void TbAika_TextChanged(object sender, TextChangedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
             if (tb.Text == "HH.mm:ss" || String.IsNullOrEmpty(tb.Text))
-            {
                 return;
-            }
             int pituus = tb.Text.Length;
-            if ((pituus != 3 && pituus != 6) && !char.IsDigit(tb.Text, pituus - 1))
-            {
+            if (pituus != 3 && pituus != 6 && !char.IsDigit(tb.Text, pituus - 1))
                 tb.Text = tb.Text.Substring(0, pituus - 1);
-            }
-            if (pituus == 2)
+            switch (pituus)
             {
-                tb.Text += ":";
-            }
-            else if (pituus == 5)
-            {
-                tb.Text += ":";
+                case 1:
+                    if (int.TryParse(tb.Text, out int t) && t > 2)
+                        tb.Text = $"0{t}:";
+                    break;
+                case 2:
+                    if (int.TryParse(tb.Text, out int tt) && tt < 24)
+                        tb.Text += ":";
+                    else
+                        tb.Text = "23:";
+                    break;
+                case 4:
+                    if (int.TryParse(tb.Text.Substring(3), out int m) && m > 5)
+                        tb.Text = $"{tb.Text.Substring(0, 3)}5";
+                    break;
+                case 5:
+                    tb.Text += ":";
+                    break;
+                case 7:
+                    if (int.TryParse(tb.Text.Substring(6), out int s) && s > 5)
+                        tb.Text = $"{tb.Text.Substring(0, 6)}5";
+                    break;
+                default:
+                    break;
             }
             tb.SelectionStart = tb.Text.Length;
+            KisaTiedostoPolku();
         }
 
         private void TbAika_GotFocus(object sender, RoutedEventArgs e)
@@ -133,6 +144,15 @@ namespace Raakadata
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
+
+        }
+
+        private void DpAlkuPvm_SelectedDateChanged(object sender, SelectionChangedEventArgs e) 
+            => KisaTiedostoPolku();
+
+        private void TbAika_LostFocus(object sender, RoutedEventArgs e)
+        {
+            TextBox tb = e.Source as TextBox;
 
         }
     }
