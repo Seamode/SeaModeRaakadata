@@ -1,5 +1,7 @@
-﻿using System;
+﻿using RaakadataLibrary;
+using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,6 +25,14 @@ namespace Raakadata
         public MainWindow()
         {
             InitializeComponent();
+            tbTiedostoPolku.Text = ConfigurationManager.AppSettings["fileDirectory"];
+            tbTallennusPolku.Text = ConfigurationManager.AppSettings["fileDirectory"];
+            ListaaTiedostot();
+            dpAlkuPvm.DisplayDate = new DateTime(2019, 09, 28);
+            dpLoppuPvm.DisplayDate = new DateTime(2019, 09, 28);
         }
+
+        private void ListaaTiedostot() =>
+            tbValitutTiedostot.Text = String.Join("\r\n", SeamodeReader.HaeTiedostotListaan(tbTiedostoPolku.Text));
     }
 }
