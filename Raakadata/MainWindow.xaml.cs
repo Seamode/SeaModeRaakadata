@@ -15,6 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Ookii.Dialogs.Wpf;
+using System.Text.RegularExpressions;
 
 namespace Raakadata
 {
@@ -31,6 +32,7 @@ namespace Raakadata
             tbTiedostoPolku.Text = ConfigurationManager.AppSettings["fileDirectory"];
             tbTallennusPolku.Text = ConfigurationManager.AppSettings["fileDirectory"];
             ListaaTiedostot();
+            // jotta tiedostot on helppo valita testausta varten.
             dpAlkuPvm.DisplayDate = new DateTime(2019, 09, 28);
             dpLoppuPvm.DisplayDate = new DateTime(2019, 09, 28);
         }
@@ -59,22 +61,29 @@ namespace Raakadata
 
         private void BtnLuoKisaTiedosto_Click(object sender, RoutedEventArgs e)
         {
+            // jotta ei tapahdu tupla klikkausta.
+            BtnLuoKisaTiedosto.IsEnabled = false;
             if (dpAlkuPvm.SelectedDate == null || dpLoppuPvm.SelectedDate == null)
             {
                 MessageBox.Show("Please select start and end dates for the race.");
+                BtnLuoKisaTiedosto.IsEnabled = true;
                 return;
             }
             if (!TimeSpan.TryParse(textBoxStart.Text, out TimeSpan alkuAika) ||
                 !TimeSpan.TryParse(textBoxEnd.Text, out TimeSpan loppuAika))
             {
-                MessageBox.Show("Please enter proper start and end times for the race.");
+                MessageBox.Show("Please enter start and end times for the race.");
+                BtnLuoKisaTiedosto.IsEnabled = true;
                 return;
             }
             if (string.IsNullOrEmpty(tbKilpailuNimi.Text))
             {
                 MessageBox.Show("Please enter a name for the race.");
+                BtnLuoKisaTiedosto.IsEnabled = true;
                 return;
             }
+            // kisan alku ja loppu datetimen muodostus.
+            // ei pitäisi päästä tähän, jos on virheellisesti syötetty.
             DateTime alku = (DateTime)dpAlkuPvm.SelectedDate;
             alku = alku.Add(alkuAika);
             DateTime loppu = (DateTime)dpLoppuPvm.SelectedDate;
@@ -82,14 +91,16 @@ namespace Raakadata
             if (loppu <= alku)
             {
                 MessageBox.Show("Check the dates and times.\nRace start must be before the ending.");
+                BtnLuoKisaTiedosto.IsEnabled = true;
                 return;
             }
-            BtnLuoKisaTiedosto.IsEnabled = false;
+            // tiedostojen luku
             SeamodeReader sr = new SeamodeReader(alku, loppu);
             foreach (string tiedosto in sr.HaeTiedostot(tbTiedostoPolku.Text))
             {
                 sr.LueTiedosto(tiedosto);
             }
+            // kisatiedoston luonti
             SeamodeWriter sw = new SeamodeWriter() { OutFile = tbKilpaTiedostoPolku.Text };
             sw.Kirjoita(sr.Rivit);
             MessageBox.Show($"File {tbKilpaTiedostoPolku.Text} was created.");
@@ -112,8 +123,14 @@ namespace Raakadata
         {
             TextBox tb = e.Source as TextBox;
             if (tb.Text == "HH:mm:ss" || string.IsNullOrEmpty(tb.Text))
+            {
+                if (tb == textBoxStart)
+                    alkuAikaPituus = 0;
+                else if (tb == textBoxEnd)
+                    loppuAikaPituus = 0;
                 return;
-            // backspace / delete
+            }
+            // backspace/deleteä varten
             if (tb == textBoxStart && tb.Text.Length < alkuAikaPituus)
             {
                 tb.Text.Remove(tb.Text.Length - 1);
@@ -128,10 +145,10 @@ namespace Raakadata
                 tb.SelectionStart = tb.Text.Length;
                 return;
             }
-            // syötetyn 'ei-luvun' hallinta ja ':'-poikkeus
+            // syötetyn 'ei-luvun' poisto ja ':'-poikkeus
             if (tb.Text.Length != 3 && tb.Text.Length != 6 && !char.IsDigit(tb.Text, tb.Text.Length - 1))
                 tb.Text = tb.Text.Substring(0, tb.Text.Length - 1);
-            if (tb.Text.Length == 3 || tb.Text.Length == 6 && !char.Equals(tb.Text[tb.Text.Length - 1], ':'))
+            if (tb.Text.Length == 3 || tb.Text.Length == 6 && !tb.Text.EndsWith(":"))
                 tb.Text = $"{tb.Text.Substring(0, tb.Text.Length - 1)}:";
             // syötetty aika oikeaan muotoon
             switch (tb.Text.Length)
@@ -161,7 +178,7 @@ namespace Raakadata
                     break;
             }
             tb.SelectionStart = tb.Text.Length;
-            // tarvitaan backspacea ja deleteä varten.
+            // tarvitaan backspace/deleteä varten.
             if (tb == textBoxStart)
                 alkuAikaPituus = tb.Text.Length;
             else if (tb == textBoxEnd)
@@ -177,7 +194,7 @@ namespace Raakadata
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
-
+            // tämä oli Artolla testausta varten?
         }
 
         private void DpAlkuPvm_SelectedDateChanged(object sender, SelectionChangedEventArgs e) 
@@ -186,13 +203,25 @@ namespace Raakadata
         private void TbAika_LostFocus(object sender, RoutedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
+            // tyhjä kenttä täytetään placeholderilla
             if (string.IsNullOrEmpty(tb.Text))
             {
                 tb.Text = "HH:mm:ss";
                 return;
             }
+            // täyttää ajan perään nollia, jos mahtuu
             string fill = "00:00:00";
             tb.Text += fill.Substring(tb.Text.Length);
+            // jos aika on väärässä muodossa, se tyhjennetään ja
+            // pyydetään käyttäjää lattamaan uusi
+            if (!Regex.IsMatch(tb.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
+            {
+                tb.Text = "HH:mm:ss";
+                if (tb == textBoxStart)
+                    MessageBox.Show("Please re-enter a start time again.");
+                else if (tb == textBoxEnd)
+                    MessageBox.Show("Please re-enter an end time again.");
+            }
             if (tb == textBoxStart)
                 KisaTiedostoPolku();
         }

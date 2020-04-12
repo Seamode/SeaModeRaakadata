@@ -32,7 +32,8 @@ namespace RaakadataLibrary
 
         public ArrayList Rivit { get; }
         public string OutDire { get; set; }
-
+        
+        // tämä on vain tiedostojen listausta wpf:ää varten.
         public static List<string> HaeTiedostotListaan(string polku)
         {
             List<string> filekset = new List<string>();
