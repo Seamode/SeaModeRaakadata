@@ -36,7 +36,7 @@ namespace Raakadata
         }
 
         private void ListaaTiedostot() =>
-            tbValitutTiedostot.Text = String.Join("\r\n", SeamodeReader.HaeTiedostotListaan(tbTiedostoPolku.Text));
+            tbValitutTiedostot.Text = string.Join("\r\n", SeamodeReader.HaeTiedostotListaan(tbTiedostoPolku.Text));
 
         private void BtnHaeTiedostoPolku_Click(object sender, RoutedEventArgs e)
         {
@@ -64,23 +64,21 @@ namespace Raakadata
                 MessageBox.Show("Please select start and end dates for the race.");
                 return;
             }
-            if (textBoxStart.Text == "HH:mm:ss" || textBoxEnd.Text == "HH:mm:ss")
+            if (!TimeSpan.TryParse(textBoxStart.Text, out TimeSpan alkuAika) ||
+                !TimeSpan.TryParse(textBoxEnd.Text, out TimeSpan loppuAika))
             {
-                MessageBox.Show("Please select start and end times for the race.");
+                MessageBox.Show("Please enter proper start and end times for the race.");
+                return;
+            }
+            if (string.IsNullOrEmpty(tbKilpailuNimi.Text))
+            {
+                MessageBox.Show("Please enter a name for the race.");
                 return;
             }
             DateTime alku = (DateTime)dpAlkuPvm.SelectedDate;
-            string[] alkuAika = textBoxStart.Text.Split(':');
-            alku = alku
-                .AddHours(int.Parse(alkuAika[0]))
-                .AddMinutes(int.Parse(alkuAika[1]))
-                .AddSeconds(int.Parse(alkuAika[2]));
+            alku = alku.Add(alkuAika);
             DateTime loppu = (DateTime)dpLoppuPvm.SelectedDate;
-            string[] loppuAika = textBoxStart.Text.Split(':');
-            loppu = loppu
-                .AddHours(int.Parse(loppuAika[0]))
-                .AddMinutes(int.Parse(loppuAika[1]))
-                .AddSeconds(int.Parse(loppuAika[2]));
+            loppu = loppu.Add(loppuAika);
             if (loppu <= alku)
             {
                 MessageBox.Show("Check the dates and times.\nRace start must be before the ending.");
@@ -104,37 +102,39 @@ namespace Raakadata
         private void KisaTiedostoPolku()
         {
             string polku = tbTallennusPolku == null ? "<Path>" : tbTallennusPolku.Text;
-            string pvm = dpAlkuPvm == null ? "<Date>" : $"{dpAlkuPvm.DisplayDate:yyyyMMdd}";
-            string aika = textBoxStart == null ? "<Time>" : String.Join("", textBoxStart.Text.Split(':'));
-            string nimi = String.IsNullOrEmpty(tbKilpailuNimi.Text) ? "<RaceName>" : tbKilpailuNimi.Text;
+            string pvm = dpAlkuPvm.SelectedDate == null ? "<Date>" : $"{dpAlkuPvm.SelectedDate:yyyyMMdd}";
+            string aika = textBoxStart.Text == "HH:mm:ss" ? "<Time>" : string.Join("", textBoxStart.Text.Split(':', '.'));
+            string nimi = string.IsNullOrEmpty(tbKilpailuNimi.Text) ? "<RaceName>" : tbKilpailuNimi.Text;
             tbKilpaTiedostoPolku.Text = $"{polku}\\SeaMODE_{pvm}_{aika}_{nimi}.csv";
         }
 
         private void TbAika_TextChanged(object sender, TextChangedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
-            if (tb.Text == "HH:mm:ss" || String.IsNullOrEmpty(tb.Text))
+            if (tb.Text == "HH:mm:ss" || string.IsNullOrEmpty(tb.Text))
                 return;
-            int pituus = tb.Text.Length;
-            if (tb == textBoxStart && pituus < alkuAikaPituus)
+            // backspace / delete
+            if (tb == textBoxStart && tb.Text.Length < alkuAikaPituus)
             {
-                tb.Text.Remove(pituus - 1);
+                tb.Text.Remove(tb.Text.Length - 1);
                 alkuAikaPituus = tb.Text.Length;
                 tb.SelectionStart = tb.Text.Length;
-                KisaTiedostoPolku();
                 return;
             }
-            else if (tb == textBoxEnd && pituus < loppuAikaPituus)
+            else if (tb == textBoxEnd && tb.Text.Length < loppuAikaPituus)
             {
-                tb.Text.Remove(pituus - 1);
+                tb.Text.Remove(tb.Text.Length - 1);
                 loppuAikaPituus = tb.Text.Length;
                 tb.SelectionStart = tb.Text.Length;
-                KisaTiedostoPolku();
                 return;
             }
-            if (pituus != 3 && pituus != 6 && !char.IsDigit(tb.Text, pituus - 1))
-                tb.Text.Remove(pituus - 1);
-            switch (pituus)
+            // syötetyn 'ei-luvun' hallinta ja ':'-poikkeus
+            if (tb.Text.Length != 3 && tb.Text.Length != 6 && !char.IsDigit(tb.Text, tb.Text.Length - 1))
+                tb.Text = tb.Text.Substring(0, tb.Text.Length - 1);
+            if (tb.Text.Length == 3 || tb.Text.Length == 6 && !char.Equals(tb.Text[tb.Text.Length - 1], ':'))
+                tb.Text = $"{tb.Text.Substring(0, tb.Text.Length - 1)}:";
+            // syötetty aika oikeaan muotoon
+            switch (tb.Text.Length)
             {
                 case 1:
                     if (int.TryParse(tb.Text, out int t) && t > 2)
@@ -161,11 +161,11 @@ namespace Raakadata
                     break;
             }
             tb.SelectionStart = tb.Text.Length;
+            // tarvitaan backspacea ja deleteä varten.
             if (tb == textBoxStart)
                 alkuAikaPituus = tb.Text.Length;
             else if (tb == textBoxEnd)
                 loppuAikaPituus = tb.Text.Length;
-            KisaTiedostoPolku();
         }
 
         private void TbAika_GotFocus(object sender, RoutedEventArgs e)
@@ -186,13 +186,15 @@ namespace Raakadata
         private void TbAika_LostFocus(object sender, RoutedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
-            if (String.IsNullOrEmpty(tb.Text))
+            if (string.IsNullOrEmpty(tb.Text))
             {
                 tb.Text = "HH:mm:ss";
                 return;
             }
             string fill = "00:00:00";
             tb.Text += fill.Substring(tb.Text.Length);
+            if (tb == textBoxStart)
+                KisaTiedostoPolku();
         }
     }
 }
