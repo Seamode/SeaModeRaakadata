@@ -3,73 +3,89 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace RaakadataLibrary
 {
-    class SeamodeReader
+    public class SeamodeReader
     {
         // Annetaan start date ja time 
         public SeamodeReader(DateTime aloitusAika, DateTime lopetusAika)
         {
             startTime = aloitusAika;
             endTime = lopetusAika;
-            string pvmFormator = String.Format("yyyyMMdd");
+            string pvmFormator = string.Format("yyyyMMdd");
             startPattern = startPattern_c + startTime.ToString(pvmFormator);
-            rivit = new ArrayList();
-         
+            Rivit = new ArrayList();
+
         }
-        
-        private const string riviOtsikkoPattern_c = "^Date_PC;Time_PC";
-        private Boolean IsOtsikkoTehty = false;
-        private DateTime startTime;
-        private DateTime endTime;
+
+        // ei käytetä ollenkaan?
+        //private const string riviOtsikkoPattern_c = "^Date_PC;Time_PC";
+        private bool IsOtsikkoTehty = false;
+        private readonly DateTime startTime;
+        private readonly DateTime endTime;
         private const string startPattern_c = "^SeaMODE_";
-        private string startPattern;
-        private CultureInfo cultureInfo = new CultureInfo("fi-FI");
+        private readonly string startPattern;
+        private readonly CultureInfo cultureInfo = new CultureInfo("fi-FI");
 
 
-        public ArrayList rivit { get; }
-        public string outDire { get; set; }
-
-        public List<String> haeTiedostot()
+        public ArrayList Rivit { get; }
+        public string OutDire { get; set; }
+        
+        // tämä on vain tiedostojen listausta wpf:ää varten.
+        public static List<string> HaeTiedostotListaan(string polku)
         {
-            List<String> filekset = new List<String>();
+            List<string> filekset = new List<string>();
+            DirectoryInfo di = new DirectoryInfo(polku);
+            string esimerkki = "SeaMODE_20190928_112953.csv";
+            int pit = esimerkki.Length;
+            foreach (var fi in di.GetFiles())
+            {
+                if (Regex.IsMatch(fi.Name, "^SeaMODE_") && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == pit)
+                    filekset.Add(fi.FullName);
+            }
+
+            return filekset;
+        }
+
+        public List<string> HaeTiedostot(string polku)
+        {
+            List<string> filekset = new List<string>();
             // Muuta seuraavat syötteeksi tai jostain configista haettavaksi
-            DirectoryInfo di = new DirectoryInfo(@"D:\scrum projekti\myairbridge-kSWEva1J3");
-            String esimerkki = "SeaMODE_20190928_112953.csv";
+            DirectoryInfo di = new DirectoryInfo(polku);
+            string esimerkki = "SeaMODE_20190928_112953.csv";
             int pit = esimerkki.Length;
             foreach (var fi in di.GetFiles())
             {
                 if (Regex.IsMatch(fi.Name, startPattern) && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == pit)
                     filekset.Add(fi.FullName);
-                if (outDire == null)
-                    outDire = new String(fi.DirectoryName.ToCharArray());
+                if (OutDire == null)
+                    OutDire = new string(fi.DirectoryName.ToCharArray());
             }
 
             return filekset;
         }
         // Haetaan rivit yhdelle tiedostolle
-        public void lueTiedosto(string fileName)
+        public void LueTiedosto(string fileName)
         {
-            String riviOtsikkoPattern = "^Date_PC;Time_PC";
-            Boolean isOtsikkoOhi = false;
+            string riviOtsikkoPattern = "^Date_PC;Time_PC";
+            bool isOtsikkoOhi = false;
             using (StreamReader sr = File.OpenText(fileName))
             {
-                String luettu = "";
+                string luettu = "";
                 while ((luettu = sr.ReadLine()) != null)
                 {
-                    if(isOtsikkoOhi)
+                    if (isOtsikkoOhi)
                     {
                         // Tarkistetaan sopiiko aika -> string splitillä haetaan aika
-                        if (tarkistaAika(luettu))
-                            rivit.Add(luettu);
+                        if (TarkistaAika(luettu))
+                            Rivit.Add(luettu);
                     }
                     // Otsikkotiedot vain kerran
-                    if(!IsOtsikkoTehty && !isOtsikkoOhi)
+                    if (!IsOtsikkoTehty && !isOtsikkoOhi)
                     {
-                        rivit.Add(luettu);
+                        Rivit.Add(luettu);
                         if (Regex.IsMatch(luettu, riviOtsikkoPattern))
                         {
                             IsOtsikkoTehty = true;
@@ -84,9 +100,9 @@ namespace RaakadataLibrary
             }
         }
         // Tarkistetaan aika
-        private Boolean tarkistaAika(string luettuRivi)
+        private bool TarkistaAika(string luettuRivi)
         {
-            string[]  arvot = luettuRivi.Split(';');
+            string[] arvot = luettuRivi.Split(';');
             // Rivissä jotain vikaa
             if (arvot.Length < 2)
                 return false;
@@ -99,6 +115,6 @@ namespace RaakadataLibrary
         }
 
     }
-   
+
 
 }

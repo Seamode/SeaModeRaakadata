@@ -7,15 +7,15 @@ using System.Text;
 namespace RaakadataLibrary
 {
     // Kirjoitetaan valikoidut rivit yhdistelmätiedostoon.
-    class SeamodeWriter
+    public class SeamodeWriter
     { 
         
-        public string outFile { get; set; }
-        public Boolean kirjoita(ArrayList rivit)
+        public string OutFile { get; set; }
+        public bool Kirjoita(ArrayList rivit)
         {
             string[] asArr = new string[rivit.Count];
             rivit.CopyTo(asArr);
-            System.IO.File.WriteAllLines(outFile, asArr);
+            File.WriteAllLines(OutFile, asArr);
             return true;
         }
     }

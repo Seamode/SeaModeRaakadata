@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         MinHeight="400" MinWidth="650"
         Title="MainWindow" Height="500" Width="800">
-    <Grid Margin="10" >
+    <Grid x:Name="TextBox" Margin="10" >
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="173*" />
             <ColumnDefinition Width="10" />
@@ -56,27 +56,33 @@
         </Grid.RowDefinitions>
         <Image Grid.RowSpan="7" Grid.ColumnSpan="24" Source="asets/Seamode.jpg" />
         <Label Grid.Column="0" Grid.Row="8" Content="Path:" Padding="0" VerticalAlignment="Center"/>
-        <TextBox Grid.Column="2" Grid.Row="8" Grid.ColumnSpan="7" Text="C:/" VerticalAlignment="Center"/>
-        <Button Grid.Column="10" Grid.Row="8" Content="Open" VerticalAlignment="Center"/>
-        <TextBox Grid.Column="14" Grid.Row="8" Grid.ColumnSpan="7" Text="C:/" VerticalAlignment="Center"/>
-        <Button Grid.Column="22" Grid.Row="8" Content="Open" VerticalAlignment="Center" />
-        <TextBox Grid.Column="2" Grid.Row="12" Grid.ColumnSpan="9" Text="C:/SeaMODE_20190928_112953.csv&#xA;C:/SeaMODE_20190928_125827.csv&#xA;C:/SeaMODE_20190928_142718.csv" Grid.RowSpan="5" IsReadOnly="True" />
-        <TextBox Grid.Column="14" Grid.Row="12" Grid.ColumnSpan="9" Text="C:/SeaMODE_20190928_142718_KILPAILU.csv" Grid.RowSpan="5" IsReadOnly="True" />
+        <TextBox x:Name="tbTiedostoPolku" Grid.Column="2" Grid.Row="8" Grid.ColumnSpan="7" Text="" VerticalAlignment="Center"/>
+        <Button x:Name="BtnHaeTiedostoPolku" Grid.Column="9" Grid.Row="8" Content="Open" VerticalAlignment="Top" Click="BtnHaeTiedostoPolku_Click" Grid.ColumnSpan="2" Margin="9.2,2,0,0"/>
+        <TextBox x:Name="tbTallennusPolku" Grid.Column="14" Grid.Row="8" Grid.ColumnSpan="7" Text="" VerticalAlignment="Center" TextChanged="TbKisaTiedostoPolku_TextChanged"/>
+        <Button x:Name="BtnHaeTallennusPolku" Grid.Column="22" Grid.Row="8" Content="Open" VerticalAlignment="Center" Click="BtnHaeTallennusPolku_Click" />
+        <TextBox x:Name="tbValitutTiedostot" Grid.Column="2" Grid.Row="12" Grid.ColumnSpan="9" Text="" Grid.RowSpan="5" IsReadOnly="True" />
+        <TextBox x:Name="tbKilpaTiedostoPolku" Grid.Column="14" Grid.Row="12" Grid.ColumnSpan="9" Text="" Grid.RowSpan="5" IsReadOnly="True" />
         <Label Grid.Column="2" Grid.Row="7" Content="Parce From:" Padding="0" Grid.ColumnSpan="7" VerticalAlignment="Center"/>
         <Label Grid.Column="14" Grid.Row="7" Content="Parce To:" Padding="0" Grid.ColumnSpan="7"  VerticalAlignment="Center"/>
         <Label Grid.Column="6" Grid.Row="10" Content="End date:" Padding="0" Grid.ColumnSpan="1"  VerticalAlignment="Center"/>
-        <Label Grid.Column="0" Grid.Row="10" Content="Start date:" Padding="0" Grid.ColumnSpan="1"  VerticalAlignment="Center"  />
-        <Label Grid.Column="14" Grid.Row="10" Content="Output file:" Padding="0" Grid.ColumnSpan="7" VerticalAlignment="Center" />
-        <Label Grid.Column="0" Grid.Row="18" Content="Errors:" Padding="0" VerticalAlignment="Center" />
-        <Label Grid.Column="2" Grid.Row="18" Content="No errors" Padding="0" Grid.ColumnSpan="7" VerticalAlignment="Center"/>
-        <Button Grid.Column="14" Grid.Row="18" Content="Parce raw data"  Grid.ColumnSpan="3" VerticalAlignment="Center"/>
+        <Label Grid.Column="0" Grid.Row="10" Content="Start date:" Padding="0" Grid.ColumnSpan="1"  VerticalAlignment="Center"   />
+        <Label Grid.Column="14" Grid.Row="10" Content="Output file:" Padding="0" Grid.ColumnSpan="2" VerticalAlignment="Center" Margin="0.4,4,0.2,3.2" />
+        <Label Grid.Column="0" Grid.Row="17" Content="Log:" Padding="0" VerticalAlignment="Center" Margin="0,5,0,2" />
+        <Button x:Name="BtnLuoKisaTiedosto" Grid.Column="14" Grid.Row="18" Content="Parce raw data"  Grid.ColumnSpan="3" VerticalAlignment="Center" Click="BtnLuoKisaTiedosto_Click"/>
         <Button Grid.Column="18" Grid.Row="18" Content="Parce GPX data"  Grid.ColumnSpan="3" VerticalAlignment="Center"/>
         <TextBox Grid.Column="1"  Grid.Row="7"  Text="i"  ToolTipService.InitialShowDelay="2000" ToolTipService.ShowDuration="20000" ToolTipService.BetweenShowDelay="10000" ToolTip="This is a tool tip."  Foreground="Red"  VerticalAlignment="Center" />
         <TextBox Grid.Column="13"  Grid.Row="7"  Text="i"  ToolTipService.InitialShowDelay="2000" ToolTipService.ShowDuration="20000" ToolTipService.BetweenShowDelay="10000" ToolTip="This is a tool tip."  Foreground="Red"  VerticalAlignment="Center" />
-        <DatePicker Grid.Column="2"  Grid.Row="10"  Grid.ColumnSpan="3" VerticalAlignment="Center"/>
-        <DatePicker Grid.Column="8"  Grid.Row="10"  Grid.ColumnSpan="3" VerticalAlignment="Center"/>
-
+        <DatePicker x:Name="dpAlkuPvm" Grid.Column="2"  Grid.Row="10"  Grid.ColumnSpan="3" VerticalAlignment="Center" SelectedDateChanged="DpAlkuPvm_SelectedDateChanged"/>
+        <DatePicker x:Name="dpLoppuPvm" Grid.Column="8"  Grid.Row="10" Grid.ColumnSpan="3" VerticalAlignment="Center"/>
+        <TextBox x:Name="textBoxStart" Grid.ColumnSpan="3" Grid.Column="2" MaxLength="8" Grid.Row="11" Text="HH:mm:ss" GotFocus="TbAika_GotFocus" TextChanged="TbAika_TextChanged" LostFocus="TbAika_LostFocus"/>
+        <Label Grid.Column="0" Grid.Row="11" Content="Start time:"  Padding="0" Grid.ColumnSpan="1"  VerticalAlignment="Center"    />
+        <Label Grid.Column="6" Grid.Row="11" Content="End time:" Padding="0" Grid.ColumnSpan="1"  VerticalAlignment="Center" Margin="0"/>
+        <TextBox x:Name="textBoxEnd" Grid.ColumnSpan="3" Grid.Column="8" MaxLength="8" Grid.Row="11" Text="HH:mm:ss"  TextChanged="TbAika_TextChanged" GotFocus="TbAika_GotFocus" LostFocus="TbAika_LostFocus"/>
+        <TextBox x:Name="BugBox" Grid.ColumnSpan="9" Grid.Column="2"   Grid.Row="17" Grid.RowSpan="2"   VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" />
+        <Button Content="tulosta pvm" Grid.Column="12" HorizontalAlignment="Left" Height="38" Grid.Row="15" VerticalAlignment="Top" Width="45" Grid.RowSpan="2" Margin="0,10,0,0" FontSize="8" Click="Button_Click_1"/>
+        <TextBox x:Name="tbKilpailuNimi" Grid.ColumnSpan="4" HorizontalAlignment="Left" Height="18" TextWrapping="Wrap" VerticalAlignment="Center" Width="121" Grid.Column="16" Margin="4.8,3,0,3" Grid.Row="10" TextChanged="TbKisaTiedostoPolku_TextChanged"/>
 
 
     </Grid>
+
 </Window>
