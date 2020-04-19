@@ -111,5 +111,8 @@
   <ItemGroup>
     <Resource Include="asets\Seamode.jpg" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Resources\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
