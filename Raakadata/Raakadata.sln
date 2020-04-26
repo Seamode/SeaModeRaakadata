@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raakadata", "Raakadata.cspr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaakadataLibrary", "..\RaakadataLibrary\RaakadataLibrary.csproj", "{D5A4744A-D940-43EF-86B4-65AC10C8BE94}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "SeaMODE Parcer", "..\SeaMODE Parcer\SeaMODE Parcer.vdproj", "{6B947AC4-4EE2-407A-B85B-24AE1D2B6A45}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,8 @@ Global
 		{D5A4744A-D940-43EF-86B4-65AC10C8BE94}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D5A4744A-D940-43EF-86B4-65AC10C8BE94}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D5A4744A-D940-43EF-86B4-65AC10C8BE94}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B947AC4-4EE2-407A-B85B-24AE1D2B6A45}.Debug|Any CPU.ActiveCfg = Debug
+		{6B947AC4-4EE2-407A-B85B-24AE1D2B6A45}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

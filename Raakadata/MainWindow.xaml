@@ -74,7 +74,7 @@
             </Button.Background>
         </Button>
         <TextBox x:Name="tbTallennusPolku" Grid.Column="14" Grid.Row="8" Grid.ColumnSpan="7" Text=""  TextChanged="TbKisaTiedostoPolku_TextChanged" BorderBrush="#FF303030"/>
-        <Button x:Name="BtnHaeTallennusPolku" Grid.Column="22" Grid.Row="8" Content="Open"  BorderBrush="#FF481616" Foreground="White" FontSize="12" Click="BtnHaeTallennusPolku_Click" >
+        <Button x:Name="BtnHaeTallennusPolku" Grid.Column="22" Grid.Row="8" Content="Open"  BorderBrush="#FF481616" Foreground="White" FontSize="12" Click="BtnHaeTallennusPolku_Click" OpacityMask="Black" >
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                     <GradientStop Color="#FFBABAC3" Offset="0"/>
