@@ -4,7 +4,7 @@
   <SolidColorBrush x:Key="RedBrush" Color="Red"/>
   <SolidColorBrush x:Key="SolidBorderBrush" Color="#888"/>
   <SolidColorBrush x:Key="GreenBrush" Color="Green"/>
-
+  <!-- tämän on muodollinenn kommentti -->
   <SolidColorBrush x:Key="DisabledBackgroundBrush" Color="#EEE"/>
   <SolidColorBrush x:Key="DisabledBorderBrush" Color="#AAA"/>
   <SolidColorBrush x:Key="DisabledForegroundBrush" Color="#888"/>
