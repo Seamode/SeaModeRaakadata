@@ -21,8 +21,6 @@ namespace RaakadataLibrary
             ReaderErrors = new List<string>();
         }
 
-        // ei käytetä ollenkaan?
-        //private const string riviOtsikkoPattern_c = "^Date_PC;Time_PC";
         private bool IsOtsikkoTehty = false;
         private readonly DateTime startTime;
         private readonly DateTime endTime;
@@ -110,7 +108,6 @@ namespace RaakadataLibrary
                             isOtsikkoOhi = true;
                             seperator[0] = headerMatch.Groups[1].ToString();
                         }
-
                     }
                     // Otsikko luettu myös ensimmäisen tiedoston jälkeen.
                     if (IsOtsikkoTehty && !isOtsikkoOhi)
@@ -146,8 +143,5 @@ namespace RaakadataLibrary
             else
                 return false;
         }
-
     }
-
-
 }
