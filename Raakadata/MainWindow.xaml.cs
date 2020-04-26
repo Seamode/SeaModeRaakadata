@@ -100,11 +100,29 @@ namespace Raakadata
             {
                 sr.LueTiedosto(tiedosto);
             }
+            // muuten tulee tyhjä tiedosto
+            if (sr.DataRowCount == 0)
+            {
+                MessageBox.Show("No data found for specified time period.");
+                BtnLuoKisaTiedosto.IsEnabled = true;
+                return;
+            }
             // kisatiedoston luonti
             SeamodeWriter sw = new SeamodeWriter() { OutFile = tbKilpaTiedostoPolku.Text };
             sw.Kirjoita(sr.Rivit);
             MessageBox.Show($"File {tbKilpaTiedostoPolku.Text} was created.");
+            if (sr.ReaderErrors.Count > 0)
+            {
+                MessageBox.Show($"{string.Join("\n", sr.ReaderErrors)}");
+            }
             BtnLuoKisaTiedosto.IsEnabled = true;
+            // syötetyt arvot tyhjennetään
+            dpAlkuPvm.ClearValue(DatePicker.SelectedDateProperty);
+            dpLoppuPvm.ClearValue(DatePicker.SelectedDateProperty);
+            textBoxStart.Text = "HH:mm:ss";
+            textBoxEnd.Text = "HH:mm:ss";
+            tbKilpailuNimi.Clear();
+            ListaaTiedostot();
         }
 
         private void TbKisaTiedostoPolku_TextChanged(object sender, TextChangedEventArgs e) 
