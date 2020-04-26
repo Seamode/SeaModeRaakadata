@@ -30,7 +30,7 @@ namespace RaakadataLibrary
         private readonly CultureInfo cultureInfo = new CultureInfo("fi-FI");
         private int columnCount;
         // liian suuri ajanmuutos = virhe, mutta missä on raja?
-        private TimeSpan maximumTimeStep = TimeSpan.FromMilliseconds(250);
+        private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(1);
         private DateTime previousTime;
 
         public ArrayList Rivit { get; }
@@ -129,9 +129,7 @@ namespace RaakadataLibrary
             DateTime tapahtumaAika = DateTime.ParseExact(arvot[0] + " " + arvot[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
             if (tapahtumaAika >= startTime && tapahtumaAika <= endTime)
             {
-                if (previousTime == null)
-                    previousTime = tapahtumaAika;
-                else if (tapahtumaAika - previousTime > maximumTimeStep)
+                if (previousTime != null && tapahtumaAika - previousTime > maximumTimeStep)
                 {
                     ReaderErrors.Add($"There was a large time difference at row {Rivit.Count}. The row was disregarded.");
                     previousTime = tapahtumaAika;
