@@ -134,7 +134,6 @@
   <ItemGroup>
     <Resource Include="asets\Seamode.jpg" />
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
     <Resource Include="SeaMODE.ico" />
   </ItemGroup>
@@ -149,6 +148,12 @@
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\SeaMODE.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Seamode.jpg" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
