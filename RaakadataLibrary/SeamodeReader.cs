@@ -31,7 +31,7 @@ namespace RaakadataLibrary
         private int columnCount;
         // liian suuri ajanmuutos = virhe, mutta missä on raja?
         private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(1);
-        private DateTime previousTime;
+        private DateTime? previousTime = null;
 
         public ArrayList Rivit { get; }
         public string OutDire { get; set; }
@@ -81,7 +81,8 @@ namespace RaakadataLibrary
             using (StreamReader sr = File.OpenText(fileName))
             {
                 string luettu = "";
-                while ((luettu = sr.ReadLine()) != null)
+                bool validFile = true;
+                while ((luettu = sr.ReadLine()) != null && validFile)
                 {
                     if (isOtsikkoOhi)
                     {
@@ -101,7 +102,6 @@ namespace RaakadataLibrary
                     // Otsikkotiedot vain kerran
                     if (!IsOtsikkoTehty && !isOtsikkoOhi)
                     {
-                        Rivit.Add(luettu);
                         Match headerMatch = Regex.Match(luettu, riviOtsikkoPattern);
                         if (headerMatch.Success)
                         {
@@ -110,6 +110,9 @@ namespace RaakadataLibrary
                             isOtsikkoOhi = true;
                             seperator[0] = headerMatch.Groups[1].ToString();
                         }
+                        if (!isOtsikkoOhi)
+                            validFile = FileValidation(rowNum, luettu, validFile);
+                        Rivit.Add(luettu);
                     }
                     // Otsikko luettu myös ensimmäisen tiedoston jälkeen.
                     if (IsOtsikkoTehty && !isOtsikkoOhi)
@@ -125,6 +128,29 @@ namespace RaakadataLibrary
                 }
             }
         }
+
+        private static bool FileValidation(int rowNum, string luettu, bool validFile)
+        {
+            // testaus näyttääkö tiedosto oikealta, jos ei muistiin kirjoittaminen lopetetaan.
+            switch (rowNum)
+            {
+                case 1:
+                    if (!luettu.StartsWith("<?xml version="))
+                        validFile = false;
+                    break;
+                case 2:
+                    if (!luettu.StartsWith("<CalibrationData>"))
+                        validFile = false;
+                    break;
+                default:
+                    if (!Regex.IsMatch(luettu, @"^\s+<") && !luettu.StartsWith("</CalibrationData>"))
+                        validFile = false;
+                    break;
+            }
+
+            return validFile;
+        }
+
         public void haeGpxData(string fileName)
         {
             string riviOtsikkoPattern = "^Date_PC(.*)Time_PC";
@@ -180,7 +206,7 @@ namespace RaakadataLibrary
             {
                 if (previousTime != null && tapahtumaAika - previousTime > maximumTimeStep)
                 {
-                    ReaderErrors.Add($"There was a large time difference at row {rowNum}. The row was disregarded.");
+                    ReaderErrors.Add($"There was a large time difference at row {rowNum}.");
                     previousTime = tapahtumaAika;
                     return false;
                 }
