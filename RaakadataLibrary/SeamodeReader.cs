@@ -77,6 +77,7 @@ namespace RaakadataLibrary
             string riviOtsikkoPattern = "^Date_PC(.*)Time_PC";
             string[] seperator = { ";" };
             bool isOtsikkoOhi = false;
+            int rowNum = 1;
             using (StreamReader sr = File.OpenText(fileName))
             {
                 string luettu = "";
@@ -86,7 +87,7 @@ namespace RaakadataLibrary
                     {
                         // Tarkistetaan sopiiko aika -> string splitillä haetaan aika
                         string[] rowValues = luettu.Split(seperator, StringSplitOptions.RemoveEmptyEntries);
-                        if (TarkistaAika(rowValues))
+                        if (TarkistaAika(rowValues, rowNum))
                         {
                             if (rowValues.Length == columnCount)
                             {
@@ -94,7 +95,7 @@ namespace RaakadataLibrary
                                 Rivit.Add(luettu);
                             }
                             else
-                                ReaderErrors.Add($"There was missing data on row {Rivit.Count}. The row was disregarded.");
+                                ReaderErrors.Add($"There was missing data on row {rowNum}. The row was disregarded.");
                         }
                     }
                     // Otsikkotiedot vain kerran
@@ -120,6 +121,7 @@ namespace RaakadataLibrary
                             isOtsikkoOhi = true;
                         }
                     }
+                    rowNum++;
                 }
             }
         }
@@ -170,15 +172,15 @@ namespace RaakadataLibrary
             gpxLines.Add(gpxLine);
         }
         // Tarkistetaan aika
-        private bool TarkistaAika(string[] arvot)
+        private bool TarkistaAika(string[] values, int rowNum)
         {
             // ensimmäisessä alkiossa pvm muodossa pp.kk.vvvv ja toisessa aika hh:mm:ss.nnn
-            DateTime tapahtumaAika = DateTime.ParseExact(arvot[0] + " " + arvot[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
+            DateTime tapahtumaAika = DateTime.ParseExact(values[0] + " " + values[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
             if (tapahtumaAika >= startTime && tapahtumaAika <= endTime)
             {
                 if (previousTime != null && tapahtumaAika - previousTime > maximumTimeStep)
                 {
-                    ReaderErrors.Add($"There was a large time difference at row {Rivit.Count}. The row was disregarded.");
+                    ReaderErrors.Add($"There was a large time difference at row {rowNum}. The row was disregarded.");
                     previousTime = tapahtumaAika;
                     return false;
                 }
