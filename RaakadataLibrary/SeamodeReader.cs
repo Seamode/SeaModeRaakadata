@@ -94,6 +94,7 @@ namespace RaakadataLibrary
                             {
                                 DataRowCount++;
                                 Rivit.Add(luettu);
+                                // tähän write luettu
                             }
                             else
                                 ReaderErrors.Add($"There was missing data on row {rowNum}. The row was disregarded.");
@@ -109,6 +110,7 @@ namespace RaakadataLibrary
                             IsOtsikkoTehty = true;
                             isOtsikkoOhi = true;
                             seperator[0] = headerMatch.Groups[1].ToString();
+                            // tähän writealltext rivit + write luettu?
                         }
                         if (!isOtsikkoOhi)
                             validFile = FileValidation(rowNum, luettu, validFile);
