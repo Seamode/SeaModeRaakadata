@@ -37,6 +37,7 @@
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Design" />
     <Reference Include="System.Drawing" />
@@ -51,7 +52,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DataErotusLogic.cs" />
+    <Compile Include="GpxLine.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SeamodeGpxWriter.cs" />
     <Compile Include="SeamodeReader.cs" />
     <Compile Include="SeamodeWriter.cs" />
   </ItemGroup>
