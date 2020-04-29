@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Windows;
 
 namespace RaakadataLibrary
 {
@@ -17,11 +18,12 @@ namespace RaakadataLibrary
             string pvmFormator = string.Format("yyyyMMdd");
             startPattern = startPattern_c + startTime.ToString(pvmFormator);
             endPattern = startPattern_c + endTime.ToString(pvmFormator);
-            Rivit = new ArrayList();
+            headerRows = new List<string>();
             ReaderErrors = new List<string>();
         }
 
         private bool IsOtsikkoTehty = false;
+        private bool headerRowsWritten = false;
         private readonly DateTime startTime;
         private readonly DateTime endTime;
         private const string startPattern_c = "^SeaMODE_";
@@ -32,9 +34,9 @@ namespace RaakadataLibrary
         // liian suuri ajanmuutos = virhe, mutta missä on raja?
         private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(1);
         private DateTime? previousTime = null;
+        private readonly List<string> headerRows;
 
-        public ArrayList Rivit { get; }
-        public string OutDire { get; set; }
+        public string TmpFile = Path.GetTempFileName();
         public List<GpxLine> gpxLines { get; set; }
         public int DataRowCount { get; private set; } = 0;
         public List<string> ReaderErrors { get; private set; }
@@ -65,8 +67,6 @@ namespace RaakadataLibrary
             {
                 if ((Regex.IsMatch(fi.Name, startPattern) || Regex.IsMatch(fi.Name, endPattern)) && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == pit)
                     filekset.Add(fi.FullName);
-                if (OutDire == null)
-                    OutDire = new string(fi.DirectoryName.ToCharArray());
             }
 
             return filekset;
@@ -78,6 +78,7 @@ namespace RaakadataLibrary
             string[] seperator = { ";" };
             bool isOtsikkoOhi = false;
             int rowNum = 1;
+            using (StreamWriter sw = File.AppendText(TmpFile))
             using (StreamReader sr = File.OpenText(fileName))
             {
                 string luettu = "";
@@ -93,8 +94,19 @@ namespace RaakadataLibrary
                             if (rowValues.Length == columnCount)
                             {
                                 DataRowCount++;
-                                Rivit.Add(luettu);
-                                // tähän write luettu
+                                if (headerRowsWritten)
+                                    sw.WriteLine(luettu);
+                                else
+                                {
+                                    foreach (string line in headerRows)
+                                    {
+                                        sw.WriteLine(line);
+                                    }
+                                    sw.WriteLine(luettu);
+                                    headerRows.Clear();
+                                    headerRows.TrimExcess();
+                                    headerRowsWritten = true;
+                                }
                             }
                             else
                                 ReaderErrors.Add($"There was missing data on row {rowNum}. The row was disregarded.");
@@ -110,11 +122,10 @@ namespace RaakadataLibrary
                             IsOtsikkoTehty = true;
                             isOtsikkoOhi = true;
                             seperator[0] = headerMatch.Groups[1].ToString();
-                            // tähän writealltext rivit + write luettu?
                         }
                         if (!isOtsikkoOhi)
                             validFile = FileValidation(rowNum, luettu, validFile);
-                        Rivit.Add(luettu);
+                        headerRows.Add(luettu);
                     }
                     // Otsikko luettu myös ensimmäisen tiedoston jälkeen.
                     if (IsOtsikkoTehty && !isOtsikkoOhi)

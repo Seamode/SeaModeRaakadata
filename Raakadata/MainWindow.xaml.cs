@@ -16,6 +16,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Ookii.Dialogs.Wpf;
 using System.Text.RegularExpressions;
+using System.IO;
 
 namespace Raakadata
 {
@@ -108,8 +109,7 @@ namespace Raakadata
                 return;
             }
             // kisatiedoston luonti
-            SeamodeWriter sw = new SeamodeWriter() { OutFile = tbKilpaTiedostoPolku.Text };
-            sw.Kirjoita(sr.Rivit);
+            File.Move(sr.TmpFile, tbKilpaTiedostoPolku.Text);
             MessageBox.Show($"File {tbKilpaTiedostoPolku.Text} was created.");
             if (sr.ReaderErrors.Count > 0)
             {
