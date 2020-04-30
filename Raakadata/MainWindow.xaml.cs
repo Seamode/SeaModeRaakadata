@@ -97,8 +97,7 @@ namespace Raakadata
             }
             // tiedostojen luku
             SeamodeReader sr = new SeamodeReader(alku, loppu);
-            var t = Task.Run(() => sr.HaeTiedostot(tbTiedostoPolku.Text));
-            t.Wait();
+            await sr.ReadFilesAsync(tbTiedostoPolku.Text);
             // muuten tulee tyhjä tiedosto
             if (sr.DataRowCount == 0)
             {

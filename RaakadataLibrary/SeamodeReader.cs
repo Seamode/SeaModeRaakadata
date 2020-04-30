@@ -23,6 +23,8 @@ namespace RaakadataLibrary
             ReaderErrors = new List<string>();
         }
 
+        public async Task ReadFilesAsync(string path) => await Task.Run(() => HaeTiedostot(path));
+
         private bool IsOtsikkoTehty = false;
         private bool headerRowsWritten = false;
         private readonly DateTime startTime;
@@ -59,7 +61,6 @@ namespace RaakadataLibrary
 
         public void HaeTiedostot(string polku)
         {
-            List<string> filePaths = new List<string>();
             // Muuta seuraavat syötteeksi tai jostain configista haettavaksi
             DirectoryInfo di = new DirectoryInfo(polku);
             string esimerkki = "SeaMODE_20190928_112953.csv";
@@ -67,11 +68,7 @@ namespace RaakadataLibrary
             foreach (var fi in di.GetFiles())
             {
                 if ((Regex.IsMatch(fi.Name, startPattern) || Regex.IsMatch(fi.Name, endPattern)) && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == pit)
-                    filePaths.Add(fi.FullName);
-            }
-            foreach (string filePath in filePaths)
-            {
-                LueTiedosto(filePath);
+                    LueTiedosto(fi.FullName);
             }
         }
         // Haetaan rivit yhdelle tiedostolle
