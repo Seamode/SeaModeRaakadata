@@ -60,7 +60,7 @@ namespace Raakadata
                 tbTallennusPolku.Text = fd.SelectedPath;
         }
 
-        private void BtnLuoKisaTiedosto_Click(object sender, RoutedEventArgs e)
+        private async void BtnLuoKisaTiedosto_Click(object sender, RoutedEventArgs e)
         {
             // jotta ei tapahdu tupla klikkausta.
             BtnLuoKisaTiedosto.IsEnabled = false;
@@ -97,10 +97,8 @@ namespace Raakadata
             }
             // tiedostojen luku
             SeamodeReader sr = new SeamodeReader(alku, loppu);
-            foreach (string tiedosto in sr.HaeTiedostot(tbTiedostoPolku.Text))
-            {
-                sr.LueTiedosto(tiedosto);
-            }
+            var t = Task.Run(() => sr.HaeTiedostot(tbTiedostoPolku.Text));
+            t.Wait();
             // muuten tulee tyhjä tiedosto
             if (sr.DataRowCount == 0)
             {

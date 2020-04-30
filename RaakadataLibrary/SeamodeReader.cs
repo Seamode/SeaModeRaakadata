@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace RaakadataLibrary
@@ -56,9 +57,9 @@ namespace RaakadataLibrary
             return filekset;
         }
 
-        public List<string> HaeTiedostot(string polku)
+        public void HaeTiedostot(string polku)
         {
-            List<string> filekset = new List<string>();
+            List<string> filePaths = new List<string>();
             // Muuta seuraavat syötteeksi tai jostain configista haettavaksi
             DirectoryInfo di = new DirectoryInfo(polku);
             string esimerkki = "SeaMODE_20190928_112953.csv";
@@ -66,10 +67,12 @@ namespace RaakadataLibrary
             foreach (var fi in di.GetFiles())
             {
                 if ((Regex.IsMatch(fi.Name, startPattern) || Regex.IsMatch(fi.Name, endPattern)) && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == pit)
-                    filekset.Add(fi.FullName);
+                    filePaths.Add(fi.FullName);
             }
-
-            return filekset;
+            foreach (string filePath in filePaths)
+            {
+                LueTiedosto(filePath);
+            }
         }
         // Haetaan rivit yhdelle tiedostolle
         public void LueTiedosto(string fileName)
@@ -142,21 +145,21 @@ namespace RaakadataLibrary
             }
         }
 
-        private static bool FileValidation(int rowNum, string luettu, bool validFile)
+        private static bool FileValidation(int rowNum, string row, bool validFile)
         {
             // testaus näyttääkö tiedosto oikealta, jos ei muistiin kirjoittaminen lopetetaan.
             switch (rowNum)
             {
                 case 1:
-                    if (!luettu.StartsWith("<?xml version="))
+                    if (!row.StartsWith("<?xml version="))
                         validFile = false;
                     break;
                 case 2:
-                    if (!luettu.StartsWith("<CalibrationData>"))
+                    if (!row.StartsWith("<CalibrationData>"))
                         validFile = false;
                     break;
                 default:
-                    if (!Regex.IsMatch(luettu, @"^\s+<") && !luettu.StartsWith("</CalibrationData>"))
+                    if (!Regex.IsMatch(row, @"^\s+<") && !row.StartsWith("</CalibrationData>"))
                         validFile = false;
                     break;
             }
