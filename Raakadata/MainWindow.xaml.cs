@@ -39,7 +39,7 @@ namespace Raakadata
         }
 
         private void ListaaTiedostot() =>
-            tbValitutTiedostot.Text = string.Join("\r\n", SeamodeReader.HaeTiedostotListaan(tbTiedostoPolku.Text));
+            tbValitutTiedostot.Text = string.Join("\r\n", SeamodeReader.FetchFilesToList(tbTiedostoPolku.Text));
 
         private void BtnHaeTiedostoPolku_Click(object sender, RoutedEventArgs e)
         {
@@ -108,9 +108,9 @@ namespace Raakadata
             // kisatiedoston luonti
             File.Move(sr.TmpFile, tbKilpaTiedostoPolku.Text);
             MessageBox.Show($"File {tbKilpaTiedostoPolku.Text} was created.");
-            if (sr.ReaderErrors.Count > 0)
+            if (sr.DataRowErrors.Count > 0)
             {
-                MessageBox.Show($"{string.Join("\n", sr.ReaderErrors)}");
+                MessageBox.Show($"{string.Join("\n", sr.DataRowErrors)}");
             }
             BtnLuoKisaTiedosto.IsEnabled = true;
             // syötetyt arvot tyhjennetään
