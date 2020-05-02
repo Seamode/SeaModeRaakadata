@@ -64,8 +64,8 @@
         </Grid.RowDefinitions>
         <Image Grid.RowSpan="7" Grid.ColumnSpan="24" Source="asets/Seamode.jpg" VerticalAlignment="Top" />
         <Label Grid.Column="0" Grid.Row="8" Content="Path:"   Foreground="White" FontSize="12" Background="#FF303030" />
-        <TextBox x:Name="tbTiedostoPolku" Grid.Column="2" Grid.Row="8" Grid.ColumnSpan="7" Text=""  BorderBrush="#FF303030" />
-        <Button x:Name="BtnHaeTiedostoPolku" Grid.Column="10" Grid.Row="8" Content="Open"  BorderBrush="#FF481616" Foreground="White" FontSize="12" Click="BtnHaeTiedostoPolku_Click" Grid.ColumnSpan="1" >
+        <TextBox x:Name="tbFolderPath" Grid.Column="2" Grid.Row="8" Grid.ColumnSpan="7" Text=""  BorderBrush="#FF303030" />
+        <Button x:Name="BtnSelectFolder" Grid.Column="10" Grid.Row="8" Content="Open"  BorderBrush="#FF481616" Foreground="White" FontSize="12" Click="BtnSelectFolder_Click" Grid.ColumnSpan="1" >
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                     <GradientStop Color="#FFBABAC3" Offset="0"/>
@@ -73,8 +73,8 @@
                 </LinearGradientBrush>
             </Button.Background>
         </Button>
-        <TextBox x:Name="tbTallennusPolku" Grid.Column="14" Grid.Row="8" Grid.ColumnSpan="7" Text=""  TextChanged="TbKisaTiedostoPolku_TextChanged" BorderBrush="#FF303030"/>
-        <Button x:Name="BtnHaeTallennusPolku" Grid.Column="22" Grid.Row="8" Content="Open"  BorderBrush="#FF481616" Foreground="White" FontSize="12" Click="BtnHaeTallennusPolku_Click" OpacityMask="Black" >
+        <TextBox x:Name="tbSavePath" Grid.Column="14" Grid.Row="8" Grid.ColumnSpan="7" Text=""  TextChanged="TbEventFilePath_TextChanged" BorderBrush="#FF303030"/>
+        <Button x:Name="BtnSelectSavePath" Grid.Column="22" Grid.Row="8" Content="Open"  BorderBrush="#FF481616" Foreground="White" FontSize="12" Click="BtnSelectSavePath_Click" OpacityMask="Black" >
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                     <GradientStop Color="#FFBABAC3" Offset="0"/>
@@ -82,15 +82,15 @@
                 </LinearGradientBrush>
             </Button.Background>
         </Button>
-        <TextBox x:Name="tbValitutTiedostot" Grid.Column="2" Grid.Row="12" Grid.ColumnSpan="9" Text="" Grid.RowSpan="5" IsReadOnly="True" BorderBrush="#FF303030" />
-        <TextBox x:Name="tbKilpaTiedostoPolku" Grid.Column="14" Grid.Row="12" Grid.ColumnSpan="9" Text="" Grid.RowSpan="5" IsReadOnly="True" BorderBrush="#FF303030" />
+        <TextBox x:Name="tbFilesInFolder" Grid.Column="2" Grid.Row="12" Grid.ColumnSpan="9" Text="" Grid.RowSpan="5" IsReadOnly="True" BorderBrush="#FF303030" />
+        <TextBox x:Name="tbEventFilePath" Grid.Column="14" Grid.Row="12" Grid.ColumnSpan="9" Text="" Grid.RowSpan="5" IsReadOnly="True" BorderBrush="#FF303030" />
         <Label Grid.Column="2" Grid.Row="7" Content="Parce From:"  Grid.ColumnSpan="7"  Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="14" Grid.Row="7" Content="Parce To:"  Grid.ColumnSpan="7"   Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="6" Grid.Row="10" Content="End date:"  Grid.ColumnSpan="1"   Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="0" Grid.Row="10" Content="Start date:"  Grid.ColumnSpan="1"   Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="14" Grid.Row="10" Content="Output file:"  Grid.ColumnSpan="2"  Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="0" Grid.Row="17" Content="Log:"  Foreground="White" FontSize="12" Background="#FF303030" />
-        <Button x:Name="BtnLuoKisaTiedosto" Grid.Column="14" Grid.Row="18" Content="Parce raw data"  Grid.ColumnSpan="3" BorderBrush="#FF481616" Foreground="White" FontSize="12"   Click="BtnLuoKisaTiedosto_Click">
+        <Button x:Name="BtnCreateEventFile" Grid.Column="14" Grid.Row="18" Content="Parce raw data"  Grid.ColumnSpan="3" BorderBrush="#FF481616" Foreground="White" FontSize="12"   Click="BtnCreateEventFile_Click">
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                     <GradientStop Color="#FF939793" Offset="0"/>
@@ -108,15 +108,15 @@
         </Button>
         <TextBox Grid.Column="0"  Grid.Row="7"  Text="i"  ToolTipService.InitialShowDelay="2000" ToolTipService.ShowDuration="20000" ToolTipService.BetweenShowDelay="10000" ToolTip="Chose outputfile location and name. Parce to raw or GPX data to chosen location."  Foreground="Red" Background="#FF303030" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="#FF303030" SelectionBrush="#FF303030" IsReadOnly="True"/>
         <TextBox Grid.Column="22"  Grid.Row="7"  Text="i"  ToolTipService.InitialShowDelay="2000" ToolTipService.ShowDuration="20000" ToolTipService.BetweenShowDelay="10000" ToolTip="Chose a path to raw data files. Chose start and end date/time to merge data."  Foreground="Red" Background="#FF303030" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" BorderBrush="#FF303030" SelectionBrush="#FF303030" IsReadOnly="True" />
-        <DatePicker x:Name="dpAlkuPvm" Grid.Column="2"  Grid.Row="10"  Grid.ColumnSpan="3" VerticalAlignment="Center" SelectedDateChanged="DpAlkuPvm_SelectedDateChanged" Background="#FF303030"/>
-        <DatePicker x:Name="dpLoppuPvm" Grid.Column="8"  Grid.Row="10" Grid.ColumnSpan="3" VerticalAlignment="Center" Background="#FF303030"/>
-        <TextBox x:Name="textBoxStart" Grid.ColumnSpan="3" Grid.Column="2" MaxLength="8" Grid.Row="11" Text="HH:mm:ss" GotFocus="TbAika_GotFocus" TextChanged="TbAika_TextChanged" LostFocus="TbAika_LostFocus" Background="#FF303030" BorderBrush="#FF303030" Foreground="White" VerticalContentAlignment="Center"/>
+        <DatePicker x:Name="dpEventStartDate" Grid.Column="2"  Grid.Row="10"  Grid.ColumnSpan="3" VerticalAlignment="Center" SelectedDateChanged="DpEventStartDate_SelectedDateChanged" Background="#FF303030"/>
+        <DatePicker x:Name="dpEventEndDate" Grid.Column="8"  Grid.Row="10" Grid.ColumnSpan="3" VerticalAlignment="Center" Background="#FF303030"/>
+        <TextBox x:Name="tbEventStartTime" Grid.ColumnSpan="3" Grid.Column="2" MaxLength="8" Grid.Row="11" Text="HH:mm:ss" GotFocus="TbTime_GotFocus" TextChanged="TbTime_TextChanged" LostFocus="TbTime_LostFocus" Background="#FF303030" BorderBrush="#FF303030" Foreground="White" VerticalContentAlignment="Center"/>
         <Label Grid.Column="0" Grid.Row="11" Content="Start time:"   Grid.ColumnSpan="1"  Foreground="White" FontSize="12" Background="#FF303030" />
         <Label Grid.Column="6" Grid.Row="11" Content="End time:"  Grid.ColumnSpan="1"   Foreground="White" FontSize="12" Background="#FF303030"/>
-        <TextBox x:Name="textBoxEnd" Grid.ColumnSpan="3" Grid.Column="8" MaxLength="8" Grid.Row="11" Text="HH:mm:ss"  TextChanged="TbAika_TextChanged" GotFocus="TbAika_GotFocus" LostFocus="TbAika_LostFocus" Background="#FF303030" BorderBrush="#FF303030" Foreground="White" VerticalContentAlignment="Center"/>
+        <TextBox x:Name="tbEventEndTime" Grid.ColumnSpan="3" Grid.Column="8" MaxLength="8" Grid.Row="11" Text="HH:mm:ss"  TextChanged="TbTime_TextChanged" GotFocus="TbTime_GotFocus" LostFocus="TbTime_LostFocus" Background="#FF303030" BorderBrush="#FF303030" Foreground="White" VerticalContentAlignment="Center"/>
         <TextBox x:Name="BugBox" Grid.ColumnSpan="9" Grid.Column="2"   Grid.Row="17" Grid.RowSpan="2"   VerticalScrollBarVisibility="Auto" TextWrapping="Wrap"  BorderBrush="#FF303030"/>
         <Button Content="tulosta pvm" Grid.Column="12" HorizontalAlignment="Left" Height="38" Grid.Row="15" VerticalAlignment="Top" Width="45" Grid.RowSpan="2" Margin="0,10,0,0" FontSize="8" Click="Button_Click_1" Background="#FF303030"/>
-        <TextBox x:Name="tbKilpailuNimi" Grid.ColumnSpan="7"  TextWrapping="Wrap"   Grid.Column="16"  Grid.Row="10" TextChanged="TbKisaTiedostoPolku_TextChanged"  BorderBrush="#FF303030" VerticalContentAlignment="Center"/>
+        <TextBox x:Name="tbEventName" Grid.ColumnSpan="7"  TextWrapping="Wrap"   Grid.Column="16"  Grid.Row="10" TextChanged="TbEventFilePath_TextChanged"  BorderBrush="#FF303030" VerticalContentAlignment="Center"/>
         <TextBlock x:Name="CopyrightTextBlock" Grid.ColumnSpan="8" Grid.Column="16"  Grid.Row="19" TextWrapping="Wrap" Text="© Oy Baltic Instruments Ab 2014" Foreground="#FFACACAC"  FlowDirection="RightToLeft" UseLayoutRounding="False" VerticalAlignment="Center" HorizontalAlignment="Right"/>
 
         <Border Grid.Column="1" Grid.Row="7" Background="#FF303030"  />

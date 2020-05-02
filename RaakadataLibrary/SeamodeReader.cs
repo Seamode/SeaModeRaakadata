@@ -76,7 +76,7 @@ namespace RaakadataLibrary
         public void ReadDataFile(string filePath)
         {
             string headerRowPattern = "^Date_PC(.*)Time_PC";
-            string[] seperator = { ";" };
+            string[] separator = { ";" };
             bool headerRowsFoundInCurrentFile = false;
             int rowNum = 1;
             using (StreamWriter sw = File.AppendText(TmpFile))
@@ -89,7 +89,7 @@ namespace RaakadataLibrary
                     if (headerRowsFoundInCurrentFile)
                     {
                         // Tarkistetaan sopiiko aika -> string splitillä haetaan aika
-                        string[] rowValues = row.Split(seperator, StringSplitOptions.RemoveEmptyEntries);
+                        string[] rowValues = row.Split(separator, StringSplitOptions.RemoveEmptyEntries);
                         if (TimeValidation(rowValues, rowNum))
                         {
                             if (rowValues.Length == columnCount)
@@ -119,10 +119,10 @@ namespace RaakadataLibrary
                         Match headerMatch = Regex.Match(row, headerRowPattern);
                         if (headerMatch.Success)
                         {
-                            columnCount = row.Split(seperator, StringSplitOptions.RemoveEmptyEntries).Length;
+                            columnCount = row.Split(separator, StringSplitOptions.RemoveEmptyEntries).Length;
                             headerRowsFound = true;
                             headerRowsFoundInCurrentFile = true;
-                            seperator[0] = headerMatch.Groups[1].ToString();
+                            separator[0] = headerMatch.Groups[1].ToString();
                         }
                         if (!headerRowsFoundInCurrentFile)
                             validFile = FileValidation(rowNum, row, validFile);
@@ -134,12 +134,14 @@ namespace RaakadataLibrary
                         Match headerMatch = Regex.Match(row, headerRowPattern);
                         if (headerMatch.Success)
                         {
-                            seperator[0] = headerMatch.Groups[1].ToString();
+                            separator[0] = headerMatch.Groups[1].ToString();
                             headerRowsFoundInCurrentFile = true;
                         }
                     }
                     rowNum++;
                 }
+                if (!validFile)
+                    DataRowErrors.Add($"There was something wrong with the xml section in file:\n{filePath}");
             }
         }
 

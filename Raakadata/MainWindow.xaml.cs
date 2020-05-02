@@ -25,138 +25,138 @@ namespace Raakadata
     /// </summary>
     public partial class MainWindow : Window
     {
-        private int alkuAikaPituus;
-        private int loppuAikaPituus;
+        private int startTimeStringLocation;
+        private int endTimeStringLocation;
         public MainWindow()
         {
             InitializeComponent();
-            tbTiedostoPolku.Text = ConfigurationManager.AppSettings["fileDirectory"];
-            tbTallennusPolku.Text = ConfigurationManager.AppSettings["fileDirectory"];
-            ListaaTiedostot();
+            tbFolderPath.Text = ConfigurationManager.AppSettings["fileDirectory"];
+            tbSavePath.Text = ConfigurationManager.AppSettings["fileDirectory"];
+            ListFilesInFolder();
             // jotta tiedostot on helppo valita testausta varten.
-            dpAlkuPvm.DisplayDate = new DateTime(2019, 09, 28);
-            dpLoppuPvm.DisplayDate = new DateTime(2019, 09, 28);
+            dpEventStartDate.DisplayDate = new DateTime(2019, 09, 28);
+            dpEventEndDate.DisplayDate = new DateTime(2019, 09, 28);
         }
 
-        private void ListaaTiedostot() =>
-            tbValitutTiedostot.Text = string.Join("\r\n", SeamodeReader.FetchFilesToList(tbTiedostoPolku.Text));
+        private void ListFilesInFolder() =>
+            tbFilesInFolder.Text = string.Join("\r\n", SeamodeReader.FetchFilesToList(tbFolderPath.Text));
 
-        private void BtnHaeTiedostoPolku_Click(object sender, RoutedEventArgs e)
+        private void BtnSelectFolder_Click(object sender, RoutedEventArgs e)
         {
             // https://stackoverflow.com/questions/1922204/open-directory-dialog
             // Ookii.Diologs.Wpf
             var fd = new VistaFolderBrowserDialog();
             if (fd.ShowDialog(this).GetValueOrDefault())
             {
-                tbTiedostoPolku.Text = fd.SelectedPath;
-                ListaaTiedostot();
+                tbFolderPath.Text = fd.SelectedPath;
+                ListFilesInFolder();
             }
         }
 
-        private void BtnHaeTallennusPolku_Click(object sender, RoutedEventArgs e)
+        private void BtnSelectSavePath_Click(object sender, RoutedEventArgs e)
         {
             var fd = new VistaFolderBrowserDialog();
             if (fd.ShowDialog(this).GetValueOrDefault())
-                tbTallennusPolku.Text = fd.SelectedPath;
+                tbSavePath.Text = fd.SelectedPath;
         }
 
-        private async void BtnLuoKisaTiedosto_Click(object sender, RoutedEventArgs e)
+        private async void BtnCreateEventFile_Click(object sender, RoutedEventArgs e)
         {
             // jotta ei tapahdu tupla klikkausta.
-            BtnLuoKisaTiedosto.IsEnabled = false;
-            if (dpAlkuPvm.SelectedDate == null || dpLoppuPvm.SelectedDate == null)
+            BtnCreateEventFile.IsEnabled = false;
+            if (dpEventStartDate.SelectedDate == null || dpEventEndDate.SelectedDate == null)
             {
                 MessageBox.Show("Please select start and end dates for the race.");
-                BtnLuoKisaTiedosto.IsEnabled = true;
+                BtnCreateEventFile.IsEnabled = true;
                 return;
             }
-            if (!TimeSpan.TryParse(textBoxStart.Text, out TimeSpan alkuAika) ||
-                !TimeSpan.TryParse(textBoxEnd.Text, out TimeSpan loppuAika))
+            if (!TimeSpan.TryParse(tbEventStartTime.Text, out TimeSpan startTime) ||
+                !TimeSpan.TryParse(tbEventEndTime.Text, out TimeSpan endTime))
             {
                 MessageBox.Show("Please enter start and end times for the race.");
-                BtnLuoKisaTiedosto.IsEnabled = true;
+                BtnCreateEventFile.IsEnabled = true;
                 return;
             }
-            if (string.IsNullOrEmpty(tbKilpailuNimi.Text))
+            if (string.IsNullOrEmpty(tbEventName.Text))
             {
                 MessageBox.Show("Please enter a name for the race.");
-                BtnLuoKisaTiedosto.IsEnabled = true;
+                BtnCreateEventFile.IsEnabled = true;
                 return;
             }
             // kisan alku ja loppu datetimen muodostus.
             // ei pitäisi päästä tähän, jos on virheellisesti syötetty.
-            DateTime alku = (DateTime)dpAlkuPvm.SelectedDate;
-            alku = alku.Add(alkuAika);
-            DateTime loppu = (DateTime)dpLoppuPvm.SelectedDate;
-            loppu = loppu.Add(loppuAika);
-            if (loppu <= alku)
+            DateTime eventStart = (DateTime)dpEventStartDate.SelectedDate;
+            eventStart = eventStart.Add(startTime);
+            DateTime eventEnd = (DateTime)dpEventEndDate.SelectedDate;
+            eventEnd = eventEnd.Add(endTime);
+            if (eventEnd <= eventStart)
             {
                 MessageBox.Show("Check the dates and times.\nRace start must be before the ending.");
-                BtnLuoKisaTiedosto.IsEnabled = true;
+                BtnCreateEventFile.IsEnabled = true;
                 return;
             }
             // tiedostojen luku
-            SeamodeReader sr = new SeamodeReader(alku, loppu);
-            await sr.ReadFilesAsync(tbTiedostoPolku.Text);
+            SeamodeReader sr = new SeamodeReader(eventStart, eventEnd);
+            await sr.ReadFilesAsync(tbFolderPath.Text);
             // muuten tulee tyhjä tiedosto
             if (sr.DataRowCount == 0)
             {
                 MessageBox.Show("No data found for specified time period.");
-                BtnLuoKisaTiedosto.IsEnabled = true;
+                BtnCreateEventFile.IsEnabled = true;
                 return;
             }
             // kisatiedoston luonti
-            File.Move(sr.TmpFile, tbKilpaTiedostoPolku.Text);
-            MessageBox.Show($"File {tbKilpaTiedostoPolku.Text} was created.");
+            File.Move(sr.TmpFile, tbEventFilePath.Text);
+            MessageBox.Show($"File {tbEventFilePath.Text} was created.");
             if (sr.DataRowErrors.Count > 0)
             {
                 MessageBox.Show($"{string.Join("\n", sr.DataRowErrors)}");
             }
-            BtnLuoKisaTiedosto.IsEnabled = true;
+            BtnCreateEventFile.IsEnabled = true;
             // syötetyt arvot tyhjennetään
-            dpAlkuPvm.ClearValue(DatePicker.SelectedDateProperty);
-            dpLoppuPvm.ClearValue(DatePicker.SelectedDateProperty);
-            textBoxStart.Text = "HH:mm:ss";
-            textBoxEnd.Text = "HH:mm:ss";
-            tbKilpailuNimi.Clear();
-            ListaaTiedostot();
+            dpEventStartDate.ClearValue(DatePicker.SelectedDateProperty);
+            dpEventEndDate.ClearValue(DatePicker.SelectedDateProperty);
+            tbEventStartTime.Text = "HH:mm:ss";
+            tbEventEndTime.Text = "HH:mm:ss";
+            tbEventName.Clear();
+            ListFilesInFolder();
         }
 
-        private void TbKisaTiedostoPolku_TextChanged(object sender, TextChangedEventArgs e) 
-            => KisaTiedostoPolku();
+        private void TbEventFilePath_TextChanged(object sender, TextChangedEventArgs e) 
+            => UpdateEventFilePath();
 
-        private void KisaTiedostoPolku()
+        private void UpdateEventFilePath()
         {
-            string polku = tbTallennusPolku == null ? "<Path>" : tbTallennusPolku.Text;
-            string pvm = dpAlkuPvm.SelectedDate == null ? "<Date>" : $"{dpAlkuPvm.SelectedDate:yyyyMMdd}";
-            string aika = textBoxStart.Text == "HH:mm:ss" ? "<Time>" : string.Join("", textBoxStart.Text.Split(':', '.'));
-            string nimi = string.IsNullOrEmpty(tbKilpailuNimi.Text) ? "<RaceName>" : tbKilpailuNimi.Text;
-            tbKilpaTiedostoPolku.Text = $"{polku}\\SeaMODE_{pvm}_{aika}_{nimi}.csv";
+            string polku = tbSavePath == null ? "<Path>" : tbSavePath.Text;
+            string pvm = dpEventStartDate.SelectedDate == null ? "<Date>" : $"{dpEventStartDate.SelectedDate:yyyyMMdd}";
+            string aika = tbEventStartTime.Text == "HH:mm:ss" ? "<Time>" : string.Join("", tbEventStartTime.Text.Split(':', '.'));
+            string nimi = string.IsNullOrEmpty(tbEventName.Text) ? "<RaceName>" : tbEventName.Text;
+            tbEventFilePath.Text = $"{polku}\\SeaMODE_{pvm}_{aika}_{nimi}.csv";
         }
 
-        private void TbAika_TextChanged(object sender, TextChangedEventArgs e)
+        private void TbTime_TextChanged(object sender, TextChangedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
             if (tb.Text == "HH:mm:ss" || string.IsNullOrEmpty(tb.Text))
             {
-                if (tb == textBoxStart)
-                    alkuAikaPituus = 0;
-                else if (tb == textBoxEnd)
-                    loppuAikaPituus = 0;
+                if (tb == tbEventStartTime)
+                    startTimeStringLocation = 0;
+                else if (tb == tbEventEndTime)
+                    endTimeStringLocation = 0;
                 return;
             }
             // backspace/deleteä varten
-            if (tb == textBoxStart && tb.Text.Length < alkuAikaPituus)
+            if (tb == tbEventStartTime && tb.Text.Length < startTimeStringLocation)
             {
                 tb.Text.Remove(tb.Text.Length - 1);
-                alkuAikaPituus = tb.Text.Length;
+                startTimeStringLocation = tb.Text.Length;
                 tb.SelectionStart = tb.Text.Length;
                 return;
             }
-            else if (tb == textBoxEnd && tb.Text.Length < loppuAikaPituus)
+            else if (tb == tbEventEndTime && tb.Text.Length < endTimeStringLocation)
             {
                 tb.Text.Remove(tb.Text.Length - 1);
-                loppuAikaPituus = tb.Text.Length;
+                endTimeStringLocation = tb.Text.Length;
                 tb.SelectionStart = tb.Text.Length;
                 return;
             }
@@ -169,11 +169,11 @@ namespace Raakadata
             switch (tb.Text.Length)
             {
                 case 1:
-                    if (int.TryParse(tb.Text, out int t) && t > 2)
-                        tb.Text = $"0{t}:";
+                    if (int.TryParse(tb.Text, out int h) && h > 2)
+                        tb.Text = $"0{h}:";
                     break;
                 case 2:
-                    if (int.TryParse(tb.Text, out int tt) && tt < 24)
+                    if (int.TryParse(tb.Text, out int hh) && hh < 24)
                         tb.Text += ":";
                     else
                         tb.Text = "23:";
@@ -194,13 +194,13 @@ namespace Raakadata
             }
             tb.SelectionStart = tb.Text.Length;
             // tarvitaan backspace/deleteä varten.
-            if (tb == textBoxStart)
-                alkuAikaPituus = tb.Text.Length;
-            else if (tb == textBoxEnd)
-                loppuAikaPituus = tb.Text.Length;
+            if (tb == tbEventStartTime)
+                startTimeStringLocation = tb.Text.Length;
+            else if (tb == tbEventEndTime)
+                endTimeStringLocation = tb.Text.Length;
         }
 
-        private void TbAika_GotFocus(object sender, RoutedEventArgs e)
+        private void TbTime_GotFocus(object sender, RoutedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
             if (tb.Text == "HH:mm:ss")
@@ -212,10 +212,10 @@ namespace Raakadata
             // tämä oli Artolla testausta varten?
         }
 
-        private void DpAlkuPvm_SelectedDateChanged(object sender, SelectionChangedEventArgs e) 
-            => KisaTiedostoPolku();
+        private void DpEventStartDate_SelectedDateChanged(object sender, SelectionChangedEventArgs e) 
+            => UpdateEventFilePath();
 
-        private void TbAika_LostFocus(object sender, RoutedEventArgs e)
+        private void TbTime_LostFocus(object sender, RoutedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
             // tyhjä kenttä täytetään placeholderilla
@@ -232,13 +232,13 @@ namespace Raakadata
             if (!Regex.IsMatch(tb.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
             {
                 tb.Text = "HH:mm:ss";
-                if (tb == textBoxStart)
+                if (tb == tbEventStartTime)
                     MessageBox.Show("Please re-enter a start time again.");
-                else if (tb == textBoxEnd)
+                else if (tb == tbEventEndTime)
                     MessageBox.Show("Please re-enter an end time again.");
             }
-            if (tb == textBoxStart)
-                KisaTiedostoPolku();
+            if (tb == tbEventStartTime)
+                UpdateEventFilePath();
         }
     }
 }
