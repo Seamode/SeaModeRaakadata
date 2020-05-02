@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SeaModeReadWrite;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -35,6 +36,7 @@ namespace RaakadataLibrary
 
         public ArrayList Rivit { get; }
         public string OutDire { get; set; }
+        public List<GpxLine> gpxLines { get; set; }
         public int DataRowCount { get; private set; } = 0;
         public List<string> ReaderErrors { get; private set; }
         // tämä on vain tiedostojen listausta wpf:ää varten.
@@ -122,6 +124,52 @@ namespace RaakadataLibrary
                 }
             }
         }
+        public void haeGpxData(string fileName)
+        {
+            string riviOtsikkoPattern = "^Date_PC(.*)Time_PC";
+            string[] seperator = { ";" };
+            bool isOtsikkoOhi = false;
+            using (StreamReader sr = File.OpenText(fileName))
+            {
+                string luettu = "";
+                DateTime prevDateTime = DateTime.MinValue;
+                while ((luettu = sr.ReadLine()) != null)
+                {
+                    string[] rowValues = luettu.Split(seperator, StringSplitOptions.RemoveEmptyEntries);
+                    if (isOtsikkoOhi && TarkistaAika(rowValues))
+                    {
+                        //Nullable<DateTime> prevDateTime = null;
+                        DateTime newDateTime;
+                        // Tehdään gpx instanssin luonti sekunnin välein
+                        newDateTime = muodostoGpxAika(luettu);
+                        TimeSpan tp = newDateTime - prevDateTime;
+                        if (tp.TotalSeconds >= 1)
+                        {
+                            TeeGpx(luettu);
+                            prevDateTime = muodostoGpxAika(luettu);
+                        }
+                    }
+                    if (Regex.IsMatch(luettu, riviOtsikkoPattern))
+                    {
+                        isOtsikkoOhi = true;
+                    }
+                }
+            }
+
+        }
+        private void TeeGpx(string luettuRivi)
+        {
+            if (gpxLines == null)
+                gpxLines = new List<GpxLine>();
+
+            string[] arvot = luettuRivi.Split(';');
+            DateTime aika = DateTime.ParseExact(arvot[23] + " " + arvot[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
+            //GpxLine gpxLine = new GpxLine(aika, arvot[25], arvot[27], arvot[29]);  
+            GpxLine gpxLine = new GpxLine(aika);
+            gpxLine.setLatitude(arvot[25]);
+            gpxLine.setLongitude(arvot[27]);
+            gpxLines.Add(gpxLine);
+        }
         // Tarkistetaan aika
         private bool TarkistaAika(string[] arvot)
         {
@@ -140,6 +188,12 @@ namespace RaakadataLibrary
             }
             else
                 return false;
+        }
+        private DateTime muodostoGpxAika(string luettuRivi)
+        {
+            string[] arvot = luettuRivi.Split(';');
+            DateTime aika = DateTime.ParseExact(arvot[23] + " " + arvot[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
+            return aika;
         }
     }
 }
