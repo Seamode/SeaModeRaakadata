@@ -17,6 +17,7 @@ using System.Windows.Shapes;
 using Ookii.Dialogs.Wpf;
 using System.Text.RegularExpressions;
 using System.IO;
+using System.Reflection;
 
 namespace Raakadata
 {
@@ -209,7 +210,14 @@ namespace Raakadata
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
-            // tämä oli Artolla testausta varten?
+            string s = System.IO.Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
+            //string s = Directory.GetParent(Assembly.GetExecutingAssembly().Location).ToString();
+            //string s = System.IO.Path.GetDirectoryName(Environment.GetCommandLineArgs()[0]);
+            if (s.EndsWith("prg"))
+            {
+                s.Replace("prg", "dat");
+            }
+            MessageBox.Show(s);
         }
 
         private void DpEventStartDate_SelectedDateChanged(object sender, SelectionChangedEventArgs e) 
