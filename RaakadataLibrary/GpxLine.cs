@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace SeaModeReadWrite
+namespace RaakadataLibrary
 {
     public class GpxLine
     {
