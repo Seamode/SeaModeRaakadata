@@ -180,7 +180,7 @@ namespace RaakadataLibrary
                 while ((luettu = sr.ReadLine()) != null)
                 {
                     string[] rowValues = luettu.Split(seperator, StringSplitOptions.RemoveEmptyEntries);
-                    if (isOtsikkoOhi && TarkistaAika(rowValues))
+                    if (isOtsikkoOhi && TimeValidation(rowValues))
                     {
                         //Nullable<DateTime> prevDateTime = null;
                         DateTime newDateTime;
@@ -214,6 +214,26 @@ namespace RaakadataLibrary
             gpxLine.setLongitude(arvot[27]);
             gpxLines.Add(gpxLine);
         }
+
+        private bool TimeValidation(string[] values)
+        {
+            // ensimmäisessä alkiossa pvm muodossa pp.kk.vvvv ja toisessa aika hh:mm:ss.nnn
+            DateTime eventTime = DateTime.ParseExact(values[0] + " " + values[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
+            if (eventTime >= startTime && eventTime <= endTime)
+            {
+                //if (prevEventTime != null && eventTime - prevEventTime > maximumTimeStep)
+                //{
+                //    DataRowErrors.Add($"There was a large time difference at row {rowNum}.");
+                //    prevEventTime = eventTime;
+                //    return false;
+                //}
+                //prevEventTime = eventTime;
+                return true;
+            }
+            else
+                return false;
+        }
+
         // Tarkistetaan aika
         private bool TimeValidation(string[] values, int rowNum)
         {
@@ -233,6 +253,7 @@ namespace RaakadataLibrary
             else
                 return false;
         }
+
         private DateTime muodostoGpxAika(string luettuRivi)
         {
             string[] arvot = luettuRivi.Split(';');

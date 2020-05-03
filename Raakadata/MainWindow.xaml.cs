@@ -215,7 +215,7 @@ namespace Raakadata
             //string s = System.IO.Path.GetDirectoryName(Environment.GetCommandLineArgs()[0]);
             if (s.EndsWith("prg"))
             {
-                s.Replace("prg", "dat");
+                s = s.Replace("prg", "dat");
             }
             MessageBox.Show(s);
         }
