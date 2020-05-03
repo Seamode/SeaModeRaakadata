@@ -5,7 +5,7 @@ using System.Globalization;
 using System.Text;
 using System.Xml;
 
-namespace SeaModeReadWrite
+namespace RaakadataLibrary
 {
     class SeamodeGpxWriter
     {
