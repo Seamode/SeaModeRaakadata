@@ -77,7 +77,7 @@ namespace RaakadataLibrary
         {
             string headerRowPattern = "^Date_PC(.*)Time_PC";
             string[] separator = { ";" };
-            bool headerRowsFoundInCurrentFile = false;
+            bool headerRowsFoundCurrentFile = false;
             int rowNum = 1;
             using (StreamWriter sw = File.AppendText(TmpFile))
             using (StreamReader sr = File.OpenText(filePath))
@@ -86,7 +86,7 @@ namespace RaakadataLibrary
                 bool validFile = true;
                 while ((row = sr.ReadLine()) != null && validFile)
                 {
-                    if (headerRowsFoundInCurrentFile)
+                    if (headerRowsFoundCurrentFile)
                     {
                         // Tarkistetaan sopiiko aika -> string splitillä haetaan aika
                         string[] rowValues = row.Split(separator, StringSplitOptions.RemoveEmptyEntries);
@@ -114,28 +114,28 @@ namespace RaakadataLibrary
                         }
                     }
                     // Otsikkotiedot vain kerran
-                    if (!headerRowsFound && !headerRowsFoundInCurrentFile)
+                    else if (!headerRowsFound && !headerRowsFoundCurrentFile)
                     {
                         Match headerMatch = Regex.Match(row, headerRowPattern);
                         if (headerMatch.Success)
                         {
                             columnCount = row.Split(separator, StringSplitOptions.RemoveEmptyEntries).Length;
                             headerRowsFound = true;
-                            headerRowsFoundInCurrentFile = true;
+                            headerRowsFoundCurrentFile = true;
                             separator[0] = headerMatch.Groups[1].ToString();
                         }
-                        if (!headerRowsFoundInCurrentFile)
+                        else
                             validFile = FileValidation(rowNum, row, validFile);
                         headerRows.Add(row);
                     }
                     // Otsikko luettu myös ensimmäisen tiedoston jälkeen.
-                    if (headerRowsFound && !headerRowsFoundInCurrentFile)
+                    else if (headerRowsFound && !headerRowsFoundCurrentFile)
                     {
                         Match headerMatch = Regex.Match(row, headerRowPattern);
                         if (headerMatch.Success)
                         {
                             separator[0] = headerMatch.Groups[1].ToString();
-                            headerRowsFoundInCurrentFile = true;
+                            headerRowsFoundCurrentFile = true;
                         }
                     }
                     rowNum++;
@@ -219,19 +219,7 @@ namespace RaakadataLibrary
         {
             // ensimmäisessä alkiossa pvm muodossa pp.kk.vvvv ja toisessa aika hh:mm:ss.nnn
             DateTime eventTime = DateTime.ParseExact(values[0] + " " + values[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
-            if (eventTime >= startTime && eventTime <= endTime)
-            {
-                //if (prevEventTime != null && eventTime - prevEventTime > maximumTimeStep)
-                //{
-                //    DataRowErrors.Add($"There was a large time difference at row {rowNum}.");
-                //    prevEventTime = eventTime;
-                //    return false;
-                //}
-                //prevEventTime = eventTime;
-                return true;
-            }
-            else
-                return false;
+            return (eventTime >= startTime && eventTime <= endTime) ? true : false;
         }
 
         // Tarkistetaan aika
