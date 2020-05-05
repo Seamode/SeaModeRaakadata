@@ -19,7 +19,7 @@ namespace RaakadataLibrary
             string dateFormat = string.Format("yyyyMMdd");
             startPattern = startPattern_c + startTime.ToString(dateFormat);
             endPattern = startPattern_c + endTime.ToString(dateFormat);
-            headerRows = new List<string>();
+            //headerRows = new List<string>();
             DataRowErrors = new List<string>();
         }
 
@@ -36,7 +36,7 @@ namespace RaakadataLibrary
         // liian suuri ajanmuutos = virhe, mutta missä on raja?
         private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(1);
         private DateTime? prevEventTime = null;
-        private readonly List<string> headerRows;
+        //private readonly List<string> headerRows;
         private readonly string headerRowPattern = "^Date_PC(.*)Time_PC";
 
         public string TmpFile = Path.GetTempFileName();
@@ -80,13 +80,14 @@ namespace RaakadataLibrary
         public void ReadDataFile(string filePath)
         {
             string[] separator = { ";" };
+            bool validFile = true;
             bool headerRowsFoundCurrentFile = false;
+            List<string> headerRows = new List<string>();
             int rowNum = 1;
             using (StreamWriter sw = File.AppendText(TmpFile))
             using (StreamReader sr = File.OpenText(filePath))
             {
                 string row = "";
-                bool validFile = true;
                 while ((row = sr.ReadLine()) != null && validFile && !pastEnd)
                 {
                     if (headerRowsFoundCurrentFile)
@@ -117,7 +118,7 @@ namespace RaakadataLibrary
                         }
                     }
                     else
-                        FileValidation(rowNum, row, ref validFile, ref headerRowsFoundCurrentFile, ref separator);
+                        FileValidation(headerRows, rowNum, row, ref validFile, ref headerRowsFoundCurrentFile, ref separator);
                     rowNum++;
                 }
                 if (!validFile)
@@ -126,6 +127,7 @@ namespace RaakadataLibrary
         }
 
         private void FileValidation(
+            List<string> headerRows,
             int rowNum,
             string row,
             ref bool validFile,
