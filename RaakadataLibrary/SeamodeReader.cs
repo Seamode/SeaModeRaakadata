@@ -27,6 +27,7 @@ namespace RaakadataLibrary
         private bool headerRowsWritten = false;
         private readonly DateTime startTime;
         private readonly DateTime endTime;
+        private bool pastEnd = false;
         private const string startPattern_c = "^SeaMODE_";
         private readonly string startPattern;
         private readonly string endPattern;
@@ -36,6 +37,7 @@ namespace RaakadataLibrary
         private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(1);
         private DateTime? prevEventTime = null;
         private readonly List<string> headerRows;
+        private readonly string headerRowPattern = "^Date_PC(.*)Time_PC";
 
         public string TmpFile = Path.GetTempFileName();
         public List<GpxLine> gpxLines { get; set; }
@@ -68,6 +70,8 @@ namespace RaakadataLibrary
             int len = example.Length;
             foreach (var fi in di.GetFiles())
             {
+                if (pastEnd)
+                    break;
                 if ((Regex.IsMatch(fi.Name, startPattern) || Regex.IsMatch(fi.Name, endPattern)) && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == len)
                     ReadDataFile(fi.FullName);
             }
@@ -75,7 +79,6 @@ namespace RaakadataLibrary
         // Haetaan rivit yhdelle tiedostolle
         public void ReadDataFile(string filePath)
         {
-            string headerRowPattern = "^Date_PC(.*)Time_PC";
             string[] separator = { ";" };
             bool headerRowsFoundCurrentFile = false;
             int rowNum = 1;
@@ -84,7 +87,7 @@ namespace RaakadataLibrary
             {
                 string row = "";
                 bool validFile = true;
-                while ((row = sr.ReadLine()) != null && validFile)
+                while ((row = sr.ReadLine()) != null && validFile && !pastEnd)
                 {
                     if (headerRowsFoundCurrentFile)
                     {
@@ -113,31 +116,8 @@ namespace RaakadataLibrary
                                 DataRowErrors.Add($"There was missing data on row {rowNum}. The row was disregarded.");
                         }
                     }
-                    // Otsikkotiedot vain kerran
-                    else if (!headerRowsFound && !headerRowsFoundCurrentFile)
-                    {
-                        Match headerMatch = Regex.Match(row, headerRowPattern);
-                        if (headerMatch.Success)
-                        {
-                            columnCount = row.Split(separator, StringSplitOptions.RemoveEmptyEntries).Length;
-                            headerRowsFound = true;
-                            headerRowsFoundCurrentFile = true;
-                            separator[0] = headerMatch.Groups[1].ToString();
-                        }
-                        else
-                            validFile = FileValidation(rowNum, row, validFile);
-                        headerRows.Add(row);
-                    }
-                    // Otsikko luettu myös ensimmäisen tiedoston jälkeen.
-                    else if (headerRowsFound && !headerRowsFoundCurrentFile)
-                    {
-                        Match headerMatch = Regex.Match(row, headerRowPattern);
-                        if (headerMatch.Success)
-                        {
-                            separator[0] = headerMatch.Groups[1].ToString();
-                            headerRowsFoundCurrentFile = true;
-                        }
-                    }
+                    else
+                        FileValidation(rowNum, row, ref validFile, ref headerRowsFoundCurrentFile, ref separator);
                     rowNum++;
                 }
                 if (!validFile)
@@ -145,10 +125,14 @@ namespace RaakadataLibrary
             }
         }
 
-        private static bool FileValidation(int rowNum, string row, bool validFile)
+        private void FileValidation(
+            int rowNum,
+            string row,
+            ref bool validFile,
+            ref bool headerRowsFoundCurrentFile,
+            ref string[] separator)
         {
             // testaus näyttääkö tiedosto oikealta, jos ei muistiin kirjoittaminen lopetetaan.
-            // tarvitaanko tätä enää?
             switch (rowNum)
             {
                 case 1:
@@ -160,17 +144,27 @@ namespace RaakadataLibrary
                         validFile = false;
                     break;
                 default:
-                    if (!Regex.IsMatch(row, @"^\s+<") && !row.StartsWith("</CalibrationData>"))
+                    Match headerMatch = Regex.Match(row, headerRowPattern);
+                    if (!Regex.IsMatch(row, @"^\s+<") && !row.StartsWith("</CalibrationData>") && !headerMatch.Success)
                         validFile = false;
+                    else if (headerMatch.Success)
+                    {
+                        separator[0] = headerMatch.Groups[1].ToString();
+                        headerRowsFoundCurrentFile = true;
+                        if (!headerRowsFound)
+                        {
+                            columnCount = row.Split(separator, StringSplitOptions.RemoveEmptyEntries).Length;
+                            headerRowsFound = true;
+                        }
+                    }
                     break;
             }
-
-            return validFile;
+            if (validFile)
+                headerRows.Add(row);
         }
 
         public void haeGpxData(string fileName)
         {
-            string riviOtsikkoPattern = "^Date_PC(.*)Time_PC";
             string[] seperator = { ";" };
             bool isOtsikkoOhi = false;
             using (StreamReader sr = File.OpenText(fileName))
@@ -193,14 +187,14 @@ namespace RaakadataLibrary
                             prevDateTime = muodostoGpxAika(luettu);
                         }
                     }
-                    if (Regex.IsMatch(luettu, riviOtsikkoPattern))
+                    if (Regex.IsMatch(luettu, headerRowPattern))
                     {
                         isOtsikkoOhi = true;
                     }
                 }
             }
-
         }
+
         private void TeeGpx(string luettuRivi)
         {
             if (gpxLines == null)
@@ -227,7 +221,12 @@ namespace RaakadataLibrary
         {
             // ensimmäisessä alkiossa pvm muodossa pp.kk.vvvv ja toisessa aika hh:mm:ss.nnn
             DateTime eventTime = DateTime.ParseExact(values[0] + " " + values[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
-            if (eventTime >= startTime && eventTime <= endTime)
+            if (eventTime > endTime)
+            {
+                pastEnd = true;
+                return false;
+            }
+            else if (eventTime >= startTime && eventTime <= endTime)
             {
                 if (prevEventTime != null && eventTime - prevEventTime > maximumTimeStep)
                 {
