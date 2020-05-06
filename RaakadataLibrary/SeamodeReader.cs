@@ -23,8 +23,7 @@ namespace RaakadataLibrary
             DataRowErrors = new List<string>();
         }
 
-        private bool headerRowsFound = false;
-        private bool headerRowsWritten = false;
+        private bool headersWritten = false;
         private readonly DateTime startTime;
         private readonly DateTime endTime;
         private bool pastEnd = false;
@@ -32,6 +31,7 @@ namespace RaakadataLibrary
         private readonly string startPattern;
         private readonly string endPattern;
         private readonly CultureInfo cultureInfo = new CultureInfo("fi-FI");
+        private bool dataColumnsCounted = false;
         private int columnCount;
         // liian suuri ajanmuutos = virhe, mutta missä on raja?
         private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(1);
@@ -81,7 +81,7 @@ namespace RaakadataLibrary
         {
             string[] separator = { ";" };
             bool validFile = true;
-            bool headerRowsFoundCurrentFile = false;
+            bool headersFound = false;
             List<string> headerRows = new List<string>();
             int rowNum = 1;
             using (StreamWriter sw = File.AppendText(TmpFile))
@@ -90,7 +90,7 @@ namespace RaakadataLibrary
                 string row = "";
                 while ((row = sr.ReadLine()) != null && validFile && !pastEnd)
                 {
-                    if (headerRowsFoundCurrentFile)
+                    if (headersFound)
                     {
                         // Tarkistetaan sopiiko aika -> string splitillä haetaan aika
                         string[] rowValues = row.Split(separator, StringSplitOptions.RemoveEmptyEntries);
@@ -99,7 +99,7 @@ namespace RaakadataLibrary
                             if (rowValues.Length == columnCount)
                             {
                                 DataRowCount++;
-                                if (headerRowsWritten)
+                                if (headersWritten)
                                     sw.WriteLine(row);
                                 else
                                 {
@@ -110,7 +110,7 @@ namespace RaakadataLibrary
                                     sw.WriteLine(row);
                                     headerRows.Clear();
                                     headerRows.TrimExcess();
-                                    headerRowsWritten = true;
+                                    headersWritten = true;
                                 }
                             }
                             else
@@ -118,7 +118,7 @@ namespace RaakadataLibrary
                         }
                     }
                     else
-                        FileValidation(headerRows, rowNum, row, ref validFile, ref headerRowsFoundCurrentFile, ref separator);
+                        FileValidation(headerRows, rowNum, row, ref validFile, ref headersFound, ref separator);
                     rowNum++;
                 }
                 if (!validFile)
@@ -126,13 +126,12 @@ namespace RaakadataLibrary
             }
         }
 
-        private void FileValidation(
-            List<string> headerRows,
-            int rowNum,
-            string row,
-            ref bool validFile,
-            ref bool headerRowsFoundCurrentFile,
-            ref string[] separator)
+        private void FileValidation(List<string> headerRows,
+                                    int rowNum,
+                                    string row,
+                                    ref bool validFile,
+                                    ref bool headersFound,
+                                    ref string[] separator)
         {
             // testaus näyttääkö tiedosto oikealta, jos ei muistiin kirjoittaminen lopetetaan.
             switch (rowNum)
@@ -152,16 +151,16 @@ namespace RaakadataLibrary
                     else if (headerMatch.Success)
                     {
                         separator[0] = headerMatch.Groups[1].ToString();
-                        headerRowsFoundCurrentFile = true;
-                        if (!headerRowsFound)
+                        headersFound = true;
+                        if (!dataColumnsCounted)
                         {
                             columnCount = row.Split(separator, StringSplitOptions.RemoveEmptyEntries).Length;
-                            headerRowsFound = true;
+                            dataColumnsCounted = true;
                         }
                     }
                     break;
             }
-            if (validFile)
+            if (validFile && !headersWritten)
                 headerRows.Add(row);
         }
 
