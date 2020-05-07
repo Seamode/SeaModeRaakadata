@@ -20,7 +20,6 @@ namespace RaakadataLibrary
             string dateFormat = string.Format("yyyyMMdd");
             startPattern = startPattern_c + startTime.ToString(dateFormat);
             endPattern = startPattern_c + endTime.ToString(dateFormat);
-            //headerRows = new List<string>();
             DataRowErrors = new List<string>();
         }
 
@@ -36,15 +35,22 @@ namespace RaakadataLibrary
         // liian suuri ajanmuutos = virhe, mutta missä on raja?
         private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(1);
         private DateTime? prevEventTime = null;
-        //private readonly List<string> headerRows;
         private readonly string headerRowPattern = "^Date_PC(.*)Time_PC";
 
         public string TmpFile = Path.GetTempFileName();
         public List<GpxLine> gpxLines { get; set; }
         public int DataRowCount { get; private set; } = 0;
         public List<string> DataRowErrors { get; private set; }
+        // jotta käyttöliittymä ei lukkiudu tiedoston luku ja kirjoituksen ajaksi
+        public async Task ReadAndWriteFilesAsync(string path) => await Task.Run(() => ForeachFileIn(FetchFilesToRead(path)));
 
-        public async Task ReadFilesAsync(string path) => await Task.Run(() => FetchFilesToRead(path));
+        private void ForeachFileIn(List<string> files)
+        {
+            foreach (string file in files)
+            {
+                ReadAndWriteDataFile(file);
+            }
+        }
 
         // tämä on vain tiedostojen listausta wpf:ää varten.
         public static List<string> FetchFilesToList(string path)
@@ -62,10 +68,11 @@ namespace RaakadataLibrary
             return files;
         }
 
-        public void FetchFilesToRead(string directoryPath)
+        public List<string> FetchFilesToRead(string path)
         {
             // Muuta seuraavat syötteeksi tai jostain configista haettavaksi
-            DirectoryInfo di = new DirectoryInfo(directoryPath);
+            List<string> files = new List<string>();
+            DirectoryInfo di = new DirectoryInfo(path);
             string example = "SeaMODE_20190928_112953.csv";
             int len = example.Length;
             foreach (var fi in di.GetFiles())
@@ -73,11 +80,14 @@ namespace RaakadataLibrary
                 if (pastEnd)
                     break;
                 if ((Regex.IsMatch(fi.Name, startPattern) || Regex.IsMatch(fi.Name, endPattern)) && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == len)
-                    ReadDataFile(fi.FullName);
+                    files.Add(fi.FullName);
             }
+
+            return files;
         }
+
         // Haetaan rivit yhdelle tiedostolle
-        public void ReadDataFile(string filePath)
+        private void ReadAndWriteDataFile(string filePath)
         {
             string[] separator = { ";" };
             bool validFile = true;
@@ -225,7 +235,7 @@ namespace RaakadataLibrary
             {
                 if (prevEventTime != null && eventTime - prevEventTime > maximumTimeStep)
                 {
-                    DataRowErrors.Add($"There was a large time difference at row {rowNum}.");
+                    DataRowErrors.Add($"There was a large time difference between row {rowNum} and the previous row.");
                     prevEventTime = eventTime;
                     return false;
                 }
