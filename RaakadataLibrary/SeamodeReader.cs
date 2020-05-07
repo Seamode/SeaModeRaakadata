@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -31,7 +32,6 @@ namespace RaakadataLibrary
         private readonly string startPattern;
         private readonly string endPattern;
         private readonly CultureInfo cultureInfo = new CultureInfo("fi-FI");
-        private bool dataColumnsCounted = false;
         private int columnCount;
         // liian suuri ajanmuutos = virhe, mutta missä on raja?
         private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(1);
@@ -96,22 +96,21 @@ namespace RaakadataLibrary
                         string[] rowValues = row.Split(separator, StringSplitOptions.RemoveEmptyEntries);
                         if (TimeValidation(rowValues, rowNum))
                         {
+                            if (!headersWritten)
+                            {
+                                foreach (string line in headerRows)
+                                {
+                                    sw.WriteLine(line);
+                                }
+                                columnCount = headerRows.Last().Split(separator, StringSplitOptions.RemoveEmptyEntries).Length;
+                                headerRows.Clear();
+                                headerRows.TrimExcess();
+                                headersWritten = true;
+                            }
                             if (rowValues.Length == columnCount)
                             {
                                 DataRowCount++;
-                                if (headersWritten)
-                                    sw.WriteLine(row);
-                                else
-                                {
-                                    foreach (string line in headerRows)
-                                    {
-                                        sw.WriteLine(line);
-                                    }
-                                    sw.WriteLine(row);
-                                    headerRows.Clear();
-                                    headerRows.TrimExcess();
-                                    headersWritten = true;
-                                }
+                                sw.WriteLine(row);
                             }
                             else
                                 DataRowErrors.Add($"There was missing data on row {rowNum}. The row was disregarded.");
@@ -152,11 +151,6 @@ namespace RaakadataLibrary
                     {
                         separator[0] = headerMatch.Groups[1].ToString();
                         headersFound = true;
-                        if (!dataColumnsCounted)
-                        {
-                            columnCount = row.Split(separator, StringSplitOptions.RemoveEmptyEntries).Length;
-                            dataColumnsCounted = true;
-                        }
                     }
                     break;
             }
