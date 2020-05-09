@@ -7,7 +7,7 @@ using System.Xml;
 
 namespace RaakadataLibrary
 {
-    class SeamodeGpxWriter
+    public class SeamodeGpxWriter
     {
         private XmlDocument doc;
         private XmlNode rootNode;

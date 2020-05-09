@@ -248,5 +248,97 @@ namespace Raakadata
             if (tb == tbEventStartTime)
                 UpdateEventFilePath();
         }
+
+        private async void BtnCreatePgxFile_Click(object sender, RoutedEventArgs e)
+        {
+            // jotta ei tapahdu tupla klikkausta.
+            BtnCreatePgxFile.IsEnabled = false;
+            BtnCreateEventFile.IsEnabled = false;
+            if (dpEventStartDate.SelectedDate == null || dpEventEndDate.SelectedDate == null)
+            {
+                MessageBox.Show("Please select start and end dates for the race.");
+                BtnCreatePgxFile.IsEnabled = true;
+                BtnCreateEventFile.IsEnabled = true;
+                return;
+            }
+            if (!TimeSpan.TryParse(tbEventStartTime.Text, out TimeSpan startTime) ||
+                !TimeSpan.TryParse(tbEventEndTime.Text, out TimeSpan endTime))
+            {
+                MessageBox.Show("Please enter start and end times for the race.");
+                BtnCreatePgxFile.IsEnabled = true;
+                BtnCreateEventFile.IsEnabled = true;
+                return;
+            }
+            
+            /*
+            if (string.IsNullOrEmpty(tbEventName.Text))
+            {
+                MessageBox.Show("Please enter a name for the race.");
+                BtnCreatePgxFile.IsEnabled = true;
+                return;
+            }
+            */
+            
+            // kisan alku ja loppu datetimen muodostus.
+            // ei pitäisi päästä tähän, jos on virheellisesti syötetty.
+            DateTime eventStart = (DateTime)dpEventStartDate.SelectedDate;
+            eventStart = eventStart.Add(startTime);
+            DateTime eventEnd = (DateTime)dpEventEndDate.SelectedDate;
+            eventEnd = eventEnd.Add(endTime);
+            if (eventEnd <= eventStart)
+            {
+                MessageBox.Show("Check the dates and times.\nRace start must be before the ending.");
+                BtnCreatePgxFile.IsEnabled = true;
+                BtnCreateEventFile.IsEnabled = true;
+                return;
+            }
+            
+            // Muutetaan kursori kertomaan käyttäjälle käynnissä olevasta datan käsittelystä.
+            Cursor tempCursor = Cursor;
+            Cursor = Cursors.Wait;
+            ForceCursor = true;
+
+            // tiedostojen luku
+            SeamodeReader sr = new SeamodeReader(eventStart, eventEnd);
+
+            foreach (string tiedosto in sr.FetchFilesToRead(tbFolderPath.Text))
+            {
+                await Task.Run(() => sr.haeGpxData(tiedosto));
+            }
+
+            // muuten tulee tyhjä tiedosto
+            if (sr.gpxLines == null)
+            {
+                // Kursorin palautus.
+                Cursor = tempCursor;
+                ForceCursor = false;
+                MessageBox.Show("No data found for specified time period.");
+                BtnCreatePgxFile.IsEnabled = true;
+                BtnCreateEventFile.IsEnabled = true;
+                return;
+            }
+
+            SeamodeGpxWriter wr = new SeamodeGpxWriter();
+            
+            await Task.Run(() => wr.writeGpx(sr.gpxLines));
+
+            Cursor = tempCursor;
+            ForceCursor = false;
+
+            MessageBox.Show($"File {ConfigurationManager.AppSettings["gpxFile"]} was created.");
+            if (sr.DataRowErrors.Count > 0)
+            {
+                MessageBox.Show($"{string.Join("\n", sr.DataRowErrors)}");
+            }
+            BtnCreatePgxFile.IsEnabled = true;
+            BtnCreateEventFile.IsEnabled = true;
+            // syötetyt arvot tyhjennetään
+            dpEventStartDate.ClearValue(DatePicker.SelectedDateProperty);
+            dpEventEndDate.ClearValue(DatePicker.SelectedDateProperty);
+            tbEventStartTime.Text = "HH:mm:ss";
+            tbEventEndTime.Text = "HH:mm:ss";
+            tbEventName.Clear();
+            ListFilesInFolder();
+        }
     }
 }
