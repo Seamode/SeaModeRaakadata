@@ -131,12 +131,19 @@ namespace Raakadata
             }
             BtnCreateEventFile.IsEnabled = true;
             // syötetyt arvot tyhjennetään
-            dpEventStartDate.ClearValue(DatePicker.SelectedDateProperty);
-            dpEventEndDate.ClearValue(DatePicker.SelectedDateProperty);
+            ResetUI();
+            ListFilesInFolder();
+        }
+
+        private void ResetUI()
+        {
+            dpEventStartDate.SelectedDate = null;
+            //dpEventStartDate.DisplayDate = DateTime.Today;
+            dpEventEndDate.SelectedDate = null;
+            //dpEventEndDate.DisplayDate = DateTime.Today;
             tbEventStartTime.Text = timePlacehoder;
             tbEventEndTime.Text = timePlacehoder;
             tbEventName.Clear();
-            ListFilesInFolder();
         }
 
         private void TbEventFilePath_TextChanged(object sender, TextChangedEventArgs e) 
@@ -349,12 +356,14 @@ namespace Raakadata
             BtnCreatePgxFile.IsEnabled = true;
             BtnCreateEventFile.IsEnabled = true;
             // syötetyt arvot tyhjennetään
-            dpEventStartDate.ClearValue(DatePicker.SelectedDateProperty);
-            dpEventEndDate.ClearValue(DatePicker.SelectedDateProperty);
-            tbEventStartTime.Text = timePlacehoder;
-            tbEventEndTime.Text = timePlacehoder;
-            tbEventName.Clear();
+            ResetUI();
             ListFilesInFolder();
+        }
+
+        private void DpEventStartDate_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (dpEventStartDate.SelectedDate != null)
+                dpEventEndDate.DisplayDate = (DateTime)dpEventStartDate.SelectedDate;
         }
     }
 }
