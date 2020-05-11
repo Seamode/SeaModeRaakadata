@@ -28,15 +28,31 @@ namespace Raakadata
     {
         private int startTimeStringLocation;
         private int endTimeStringLocation;
+        private readonly string timePlacehoder = "HH:mm:ss";
         public MainWindow()
         {
             InitializeComponent();
-            tbFolderPath.Text = ConfigurationManager.AppSettings["fileDirectory"];
-            tbSavePath.Text = ConfigurationManager.AppSettings["fileDirectory"];
-            ListFilesInFolder();
+            string defaultPath = FindDatDirectory();
+            tbFolderPath.Text = defaultPath;
+            tbSavePath.Text = defaultPath;
+            if (!string.IsNullOrEmpty(defaultPath))
+                ListFilesInFolder();
             // jotta tiedostot on helppo valita testausta varten.
             dpEventStartDate.DisplayDate = new DateTime(2019, 09, 28);
             dpEventEndDate.DisplayDate = new DateTime(2019, 09, 28);
+        }
+
+        private string FindDatDirectory()
+        {
+            if (Directory.Exists(ConfigurationManager.AppSettings["fileDirectory"]))
+                return ConfigurationManager.AppSettings["fileDirectory"];
+            string altPath = System.IO.Path.GetDirectoryName(
+                System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
+            // ylempi pitäisi palauttaa prg, alla se vaihdetaan dat
+            altPath = $"{altPath.Substring(0, altPath.LastIndexOf(System.IO.Path.DirectorySeparatorChar) + 1)}dat";
+            if (Directory.Exists(altPath))
+                return altPath;
+            return string.Empty;
         }
 
         private void ListFilesInFolder() =>
@@ -117,8 +133,8 @@ namespace Raakadata
             // syötetyt arvot tyhjennetään
             dpEventStartDate.ClearValue(DatePicker.SelectedDateProperty);
             dpEventEndDate.ClearValue(DatePicker.SelectedDateProperty);
-            tbEventStartTime.Text = "HH:mm:ss";
-            tbEventEndTime.Text = "HH:mm:ss";
+            tbEventStartTime.Text = timePlacehoder;
+            tbEventEndTime.Text = timePlacehoder;
             tbEventName.Clear();
             ListFilesInFolder();
         }
@@ -130,7 +146,7 @@ namespace Raakadata
         {
             string polku = tbSavePath == null ? "<Path>" : tbSavePath.Text;
             string pvm = dpEventStartDate.SelectedDate == null ? "<Date>" : $"{dpEventStartDate.SelectedDate:yyyyMMdd}";
-            string aika = tbEventStartTime.Text == "HH:mm:ss" ? "<Time>" : string.Join("", tbEventStartTime.Text.Split(':', '.'));
+            string aika = tbEventStartTime.Text == timePlacehoder ? "<Time>" : string.Join("", tbEventStartTime.Text.Split(':', '.'));
             string nimi = string.IsNullOrEmpty(tbEventName.Text) ? "<RaceName>" : tbEventName.Text;
             tbEventFilePath.Text = $"{polku}\\SeaMODE_{pvm}_{aika}_{nimi}.csv";
         }
@@ -138,7 +154,7 @@ namespace Raakadata
         private void TbTime_TextChanged(object sender, TextChangedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
-            if (tb.Text == "HH:mm:ss" || string.IsNullOrEmpty(tb.Text))
+            if (tb.Text == timePlacehoder || string.IsNullOrEmpty(tb.Text))
             {
                 if (tb == tbEventStartTime)
                     startTimeStringLocation = 0;
@@ -204,7 +220,7 @@ namespace Raakadata
         private void TbTime_GotFocus(object sender, RoutedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
-            if (tb.Text == "HH:mm:ss")
+            if (tb.Text == timePlacehoder)
                 tb.Clear();
         }
 
@@ -229,7 +245,7 @@ namespace Raakadata
             // tyhjä kenttä täytetään placeholderilla
             if (string.IsNullOrEmpty(tb.Text))
             {
-                tb.Text = "HH:mm:ss";
+                tb.Text = timePlacehoder;
                 return;
             }
             // täyttää ajan perään nollia, jos mahtuu
@@ -239,7 +255,7 @@ namespace Raakadata
             // pyydetään käyttäjää lattamaan uusi
             if (!Regex.IsMatch(tb.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
             {
-                tb.Text = "HH:mm:ss";
+                tb.Text = timePlacehoder;
                 if (tb == tbEventStartTime)
                     MessageBox.Show("Please re-enter a start time again.");
                 else if (tb == tbEventEndTime)
@@ -335,8 +351,8 @@ namespace Raakadata
             // syötetyt arvot tyhjennetään
             dpEventStartDate.ClearValue(DatePicker.SelectedDateProperty);
             dpEventEndDate.ClearValue(DatePicker.SelectedDateProperty);
-            tbEventStartTime.Text = "HH:mm:ss";
-            tbEventEndTime.Text = "HH:mm:ss";
+            tbEventStartTime.Text = timePlacehoder;
+            tbEventEndTime.Text = timePlacehoder;
             tbEventName.Clear();
             ListFilesInFolder();
         }
