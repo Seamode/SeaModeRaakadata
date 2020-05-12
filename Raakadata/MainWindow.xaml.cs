@@ -318,7 +318,7 @@ namespace Raakadata
                 return;
             }
 
-            SeamodeGpxWriter wr = new SeamodeGpxWriter();
+            SeamodeGpxWriter wr = new SeamodeGpxWriter(sr.gpxRaceTime);
             
             await Task.Run(() => wr.writeGpx(sr.gpxLines));
 
