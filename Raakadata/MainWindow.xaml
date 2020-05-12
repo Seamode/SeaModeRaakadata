@@ -59,7 +59,7 @@
         </Grid.RowDefinitions>
         <Image Grid.RowSpan="7" Grid.ColumnSpan="24" Source="asets/Seamode.jpg" VerticalAlignment="Top" />
         <Label Grid.Column="0" Grid.Row="8" Content="Path:"   Foreground="White" FontSize="12" Background="#FF303030" />
-        <TextBox x:Name="tbFolderPath" Grid.Column="2" Grid.Row="8" Grid.ColumnSpan="7" Text=""  BorderBrush="#FF303030" />
+        <TextBox x:Name="tbFolderPath" Grid.Column="2" Grid.Row="8" Grid.ColumnSpan="7" Text=""  BorderBrush="#FF303030" TextChanged="TbFile_TextChanged" />
         <Button x:Name="BtnSelectFolder" Grid.Column="10" Grid.Row="8" Content="Open"  BorderBrush="#FF481616" Foreground="White" FontSize="12" Click="BtnSelectFolder_Click" Grid.ColumnSpan="1" Style="{StaticResource ButtonStyleBlue}">
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
@@ -68,7 +68,7 @@
                 </LinearGradientBrush>
             </Button.Background>
         </Button>
-        <TextBox x:Name="tbSavePath" Grid.Column="14" Grid.Row="8" Grid.ColumnSpan="7" Text=""  TextChanged="TbEventFilePath_TextChanged" BorderBrush="#FF303030"/>
+        <TextBox x:Name="tbSavePath" Grid.Column="14" Grid.Row="8" Grid.ColumnSpan="7" Text=""  TextChanged="TbFile_TextChanged" BorderBrush="#FF303030"/>
         <Button x:Name="BtnSelectSavePath" Grid.Column="22" Grid.Row="8" Content="Open"  BorderBrush="#FF481616" Foreground="White" FontSize="12" Click="BtnSelectSavePath_Click" OpacityMask="Black" Style="{StaticResource ButtonStyleBlue}">
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
@@ -80,6 +80,7 @@
         <TextBox x:Name="tbFilesInFolder" Grid.Column="2" Grid.Row="12" Grid.ColumnSpan="9" Text="" Grid.RowSpan="5" IsReadOnly="True" BorderBrush="#FF303030" />
         <TextBox x:Name="tbEventFilePath" Grid.Column="14" Grid.Row="12" Grid.ColumnSpan="9" Text="" Grid.RowSpan="5" IsReadOnly="True" BorderBrush="#FF303030" />
         <Label Grid.Column="2" Grid.Row="7" Content="Parce From:"  Grid.ColumnSpan="9"  Foreground="White" FontSize="12" Background="#FF303030"/>
+        <Label x:Name="lblValidationError" Grid.Column="2" Grid.Row="17" Content=""  Grid.ColumnSpan="9" Foreground="Red" Background="#FF303030" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="#FF303030" FontSize="12"/>
         <Label Grid.Column="14" Grid.Row="7" Content="Parce To:"  Grid.ColumnSpan="7"   Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="6" Grid.Row="10" Content="End date:"  Grid.ColumnSpan="1"   Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="0" Grid.Row="10" Content="Start date:"  Grid.ColumnSpan="1"   Foreground="White" FontSize="12" Background="#FF303030"/>
@@ -102,13 +103,13 @@
         </Button>
         <TextBox Grid.Column="0"  Grid.Row="7"  Text="i"  ToolTipService.InitialShowDelay="2000" ToolTipService.ShowDuration="20000" ToolTipService.BetweenShowDelay="10000" ToolTip="Chose outputfile location and name. Parce to raw or GPX data to chosen location."  Foreground="Red" Background="#FF303030" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="#FF303030" SelectionBrush="#FF303030" IsReadOnly="True"/>
         <TextBox Grid.Column="22"  Grid.Row="7"  Text="i"  ToolTipService.InitialShowDelay="2000" ToolTipService.ShowDuration="20000" ToolTipService.BetweenShowDelay="10000" ToolTip="Chose a path to raw data files. Chose start and end date/time to merge data."  Foreground="Red" Background="#FF303030" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" BorderBrush="#FF303030" SelectionBrush="#FF303030" IsReadOnly="True" />
-        <DatePicker x:Name="dpEventStartDate" Grid.Column="2"  Grid.Row="10"  Grid.ColumnSpan="3" VerticalAlignment="Center" SelectedDateChanged="DpEventStartDate_SelectedDateChanged" Background="#FF303030" LostFocus="DpEventStartDate_LostFocus"/>
-        <DatePicker x:Name="dpEventEndDate" Grid.Column="8"  Grid.Row="10" Grid.ColumnSpan="3" VerticalAlignment="Center" Background="#FF303030"/>
+        <DatePicker x:Name="dpEventStartDate" Grid.Column="2"  Grid.Row="10"  Grid.ColumnSpan="3" VerticalAlignment="Center" SelectedDateChanged="DpEventDate_SelectedDateChanged" Background="#FF303030"/>
+        <DatePicker x:Name="dpEventEndDate" Grid.Column="8"  Grid.Row="10" Grid.ColumnSpan="3" VerticalAlignment="Center" Background="#FF303030" SelectedDateChanged="DpEventDate_SelectedDateChanged"/>
         <TextBox x:Name="tbEventStartTime" Grid.ColumnSpan="3" Grid.Column="2" MaxLength="8" Grid.Row="11" Text="HH:mm:ss" GotFocus="TbTime_GotFocus" TextChanged="TbTime_TextChanged" LostFocus="TbTime_LostFocus" Background="#FF303030" BorderBrush="#FF303030" Foreground="White" VerticalContentAlignment="Center"/>
         <Label Grid.Column="0" Grid.Row="11" Content="Start time:"   Grid.ColumnSpan="1"  Foreground="White" FontSize="12" Background="#FF303030" />
         <Label Grid.Column="6" Grid.Row="11" Content="End time:"  Grid.ColumnSpan="1"   Foreground="White" FontSize="12" Background="#FF303030"/>
         <TextBox x:Name="tbEventEndTime" Grid.ColumnSpan="3" Grid.Column="8" MaxLength="8" Grid.Row="11" Text="HH:mm:ss"  TextChanged="TbTime_TextChanged" GotFocus="TbTime_GotFocus" LostFocus="TbTime_LostFocus" Background="#FF303030" BorderBrush="#FF303030" Foreground="White" VerticalContentAlignment="Center"/>
-        <TextBox x:Name="tbEventName" Grid.ColumnSpan="7"  TextWrapping="Wrap"   Grid.Column="16"  Grid.Row="10" TextChanged="TbEventFilePath_TextChanged"  BorderBrush="#FF303030" VerticalContentAlignment="Center"/>
+        <TextBox x:Name="tbEventName" Grid.ColumnSpan="7"  TextWrapping="Wrap"   Grid.Column="16"  Grid.Row="10" TextChanged="TbFile_TextChanged"  BorderBrush="#FF303030" VerticalContentAlignment="Center"/>
         <TextBlock x:Name="CopyrightTextBlock" Grid.ColumnSpan="8" Grid.Column="16"  Grid.Row="19" TextWrapping="Wrap" Text="© Oy Baltic Instruments Ab 2014" Foreground="#FFACACAC"  FlowDirection="RightToLeft" UseLayoutRounding="False" VerticalAlignment="Center" HorizontalAlignment="Right"/>
         <Border Grid.Column="1" Grid.Row="7" Background="#FF303030"  />
         <Border Grid.Row="9" Grid.ColumnSpan="11" Background="#FF303030" />
@@ -139,14 +140,15 @@
         <Border Grid.Row="8" Grid.Column="21" Grid.RowSpan="1" Background="#FF303030" />
         <Border Grid.Row="8" Grid.Column="13" Grid.RowSpan="1" Background="#FF303030" />
         <Border Grid.Row="9" Grid.Column="13" Grid.RowSpan="10" Background="#FF303030" />
-        <Border Grid.Row="7" Grid.Column="11" Grid.RowSpan="10" Background="#FF303030" />
+        <Border Grid.Row="7" Grid.Column="11" Grid.RowSpan="11" Background="#FF303030" />
         <Border Grid.Row="9" Grid.Column="13" Grid.ColumnSpan="10" Background="#FF303030" />
         <Border Grid.Row="11" Grid.Column="13" Grid.ColumnSpan="10" Background="#FF303030" />
         <Border Grid.Row="17" Grid.Column="13" Grid.ColumnSpan="21" Background="#FF303030" />
-        <Border Grid.Row="17" Grid.Column="2" Grid.ColumnSpan="10" Grid.RowSpan="2" Background="#FF303030" />
+        <Border Grid.Row="18" Grid.Column="2" Grid.ColumnSpan="10" Background="#FF303030" />
         <Border Grid.Row="18" Grid.Column="21" Grid.RowSpan="1" Background="#FF303030" />
         <Border Grid.Row="18" Grid.Column="22" Grid.RowSpan="1" Background="#FF303030" />
         <Border Grid.Row="18" Grid.Column="17" Grid.RowSpan="1" Background="#FF303030" />
+        <Button Grid.ColumnSpan="3" Content="Button" HorizontalAlignment="Left" VerticalAlignment="Top" Width="75" Click="Button_Click"/>
     </Grid>
 
 </Window>

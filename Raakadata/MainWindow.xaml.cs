@@ -116,11 +116,15 @@ namespace Raakadata
             }
             // kisatiedoston luonti
             File.Move(sr.TmpFile, tbEventFilePath.Text);
-            MessageBox.Show($"File {tbEventFilePath.Text} was created.");
+            if (!sr.PastEnd)
+            {
+                MessageBox.Show("The data ended before the specified endpoint");
+            }
             if (sr.DataRowErrors.Count > 0)
             {
                 MessageBox.Show($"{string.Join("\n", sr.DataRowErrors)}");
             }
+            MessageBox.Show($"File {tbEventFilePath.Text} was created.");
             BtnCreatePgxFile.IsEnabled = true;
             BtnCreateEventFile.IsEnabled = true;
             // syötetyt arvot tyhjennetään
@@ -145,31 +149,50 @@ namespace Raakadata
         private bool ValidateParameters(out TimeSpan startTime, out TimeSpan endTime)
         {
             bool valid = true;
-            if (dpEventStartDate.SelectedDate == null || dpEventEndDate.SelectedDate == null)
+            if (dpEventStartDate.SelectedDate == null)
             {
-                MessageBox.Show("Please select start and end dates for the race.");
+                dpEventStartDate.BorderBrush = Brushes.Red;
+                //MessageBox.Show("Please select start and end dates for the race.");
+                valid = false;
+            }
+            if (dpEventEndDate.SelectedDate == null)
+            {
+                dpEventEndDate.BorderBrush = Brushes.Red;
+                //MessageBox.Show("Please select start and end dates for the race.");
                 valid = false;
             }
             if (!TimeSpan.TryParse(tbEventStartTime.Text, out startTime))
             {
-                MessageBox.Show("Please enter start and end times for the race.");
+                tbEventStartTime.BorderBrush = Brushes.Red;
+                //MessageBox.Show("Please enter start and end times for the race.");
                 valid = false;
             }
             if (!TimeSpan.TryParse(tbEventEndTime.Text, out endTime))
             {
-                MessageBox.Show("Please enter start and end times for the race.");
+                tbEventEndTime.BorderBrush = Brushes.Red;
+                //MessageBox.Show("Please enter start and end times for the race.");
                 valid = false;
             }
             if (string.IsNullOrEmpty(tbEventName.Text))
             {
-                MessageBox.Show("Please enter a name for the race.");
+                tbEventName.BorderBrush = Brushes.Red;
+                //MessageBox.Show("Please enter a name for the race.");
                 valid = false;
             }
-            if (string.IsNullOrEmpty(tbEventFilePath.Text) || string.IsNullOrEmpty(tbSavePath.Text))
+            if (string.IsNullOrEmpty(tbFolderPath.Text) || !Directory.Exists(tbFolderPath.Text))
             {
-                MessageBox.Show("Please enter a folder for the files");
+                tbFolderPath.BorderBrush = Brushes.Red;
+                //MessageBox.Show("Please enter a folder for the files");
                 valid = false;
             }
+            if (string.IsNullOrEmpty(tbSavePath.Text) || !Directory.Exists(tbSavePath.Text))
+            {
+                tbSavePath.BorderBrush = Brushes.Red;
+                //MessageBox.Show("Please enter a folder for the files");
+                valid = false;
+            }
+            if (!valid)
+                lblValidationError.Content = "* Correction(s) needed for highlighted field(s)! *";
             return valid;
         }
 
@@ -182,10 +205,23 @@ namespace Raakadata
             tbEventStartTime.Text = timePlacehoder;
             tbEventEndTime.Text = timePlacehoder;
             tbEventName.Clear();
+            dpEventStartDate.ClearValue(BorderBrushProperty);
+            dpEventEndDate.ClearValue(BorderBrushProperty);
+            tbFolderPath.ClearValue(BorderBrushProperty);
+            tbSavePath.ClearValue(BorderBrushProperty);
+            tbEventStartTime.ClearValue(BorderBrushProperty);
+            tbEventEndTime.ClearValue(BorderBrushProperty);
+            tbEventName.ClearValue(BorderBrushProperty);
+            lblValidationError.ClearValue(ContentProperty);
         }
 
-        private void TbEventFilePath_TextChanged(object sender, TextChangedEventArgs e) 
-            => UpdateEventFilePath();
+        private void TbFile_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            TextBox tb = e.Source as TextBox;
+            tb.ClearValue(BorderBrushProperty);
+            if (tb == tbSavePath || tb == tbEventName)
+                UpdateEventFilePath();
+        }
 
         private void UpdateEventFilePath()
         {
@@ -199,6 +235,7 @@ namespace Raakadata
         private void TbTime_TextChanged(object sender, TextChangedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
+            tb.ClearValue(BorderBrushProperty);
             if (tb.Text == timePlacehoder || string.IsNullOrEmpty(tb.Text))
             {
                 if (tb == tbEventStartTime)
@@ -281,8 +318,17 @@ namespace Raakadata
             MessageBox.Show(s);
         }
 
-        private void DpEventStartDate_SelectedDateChanged(object sender, SelectionChangedEventArgs e) 
-            => UpdateEventFilePath();
+        private void DpEventDate_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
+        {
+            DatePicker dp = e.Source as DatePicker;
+            dp.ClearValue(BorderBrushProperty);
+            if (dp == dpEventStartDate)
+            {
+                if (dp.SelectedDate != null)
+                    dpEventEndDate.DisplayDate = (DateTime)dp.SelectedDate; 
+                UpdateEventFilePath();
+            }
+        }
 
         private void TbTime_LostFocus(object sender, RoutedEventArgs e)
         {
@@ -374,10 +420,6 @@ namespace Raakadata
             ListFilesInFolder();
         }
 
-        private void DpEventStartDate_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (dpEventStartDate.SelectedDate != null)
-                dpEventEndDate.DisplayDate = (DateTime)dpEventStartDate.SelectedDate;
-        }
+        private void Button_Click(object sender, RoutedEventArgs e) => ResetUI();
     }
 }
