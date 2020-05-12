@@ -65,7 +65,7 @@
         <Image Grid.RowSpan="7" Grid.ColumnSpan="24" Source="asets/Seamode.jpg" VerticalAlignment="Top" />
         <Label Grid.Column="0" Grid.Row="8" Content="Path:"   Foreground="White" FontSize="12" Background="#FF303030" />
         <TextBox x:Name="tbFolderPath" Grid.Column="2" Grid.Row="8" Grid.ColumnSpan="7" Text=""  BorderBrush="#FF303030" />
-        <Button x:Name="BtnSelectFolder" Grid.Column="10" Grid.Row="8" Content="Open"  BorderBrush="#FF481616" Foreground="White" FontSize="12" Click="BtnSelectFolder_Click" Grid.ColumnSpan="1" >
+        <Button x:Name="BtnSelectFolder" Grid.Column="10" Grid.Row="8" Content="Open"  BorderBrush="#FF481616" Foreground="White" FontSize="12" Click="BtnSelectFolder_Click" Grid.ColumnSpan="1" Style="{StaticResource ButtonStyleBlue}">
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                     <GradientStop Color="#FFBABAC3" Offset="0"/>
@@ -74,7 +74,7 @@
             </Button.Background>
         </Button>
         <TextBox x:Name="tbSavePath" Grid.Column="14" Grid.Row="8" Grid.ColumnSpan="7" Text=""  TextChanged="TbEventFilePath_TextChanged" BorderBrush="#FF303030"/>
-        <Button x:Name="BtnSelectSavePath" Grid.Column="22" Grid.Row="8" Content="Open"  BorderBrush="#FF481616" Foreground="White" FontSize="12" Click="BtnSelectSavePath_Click" OpacityMask="Black" >
+        <Button x:Name="BtnSelectSavePath" Grid.Column="22" Grid.Row="8" Content="Open"  BorderBrush="#FF481616" Foreground="White" FontSize="12" Click="BtnSelectSavePath_Click" OpacityMask="Black" Style="{StaticResource ButtonStyleBlue}">
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                     <GradientStop Color="#FFBABAC3" Offset="0"/>
@@ -90,7 +90,7 @@
         <Label Grid.Column="0" Grid.Row="10" Content="Start date:"  Grid.ColumnSpan="1"   Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="14" Grid.Row="10" Content="Output file:"  Grid.ColumnSpan="2"  Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="0" Grid.Row="17" Content="Log:"  Foreground="White" FontSize="12" Background="#FF303030" />
-        <Button x:Name="BtnCreateEventFile" Grid.Column="14" Grid.Row="18" Content="Parce raw data"  Grid.ColumnSpan="3" BorderBrush="#FF481616" Foreground="White" FontSize="12"   Click="BtnCreateEventFile_Click">
+        <Button x:Name="BtnCreateEventFile" Grid.Column="14" Grid.Row="18" Content="Parce raw data"  Grid.ColumnSpan="3" BorderBrush="#FF481616" Foreground="White" FontSize="12"   Click="BtnCreateEventFile_Click" Style="{StaticResource ButtonStyleGreen}">
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                     <GradientStop Color="#FF939793" Offset="0"/>
@@ -98,7 +98,7 @@
                 </LinearGradientBrush>
             </Button.Background>
         </Button>
-        <Button x:Name="BtnCreatePgxFile" Grid.Column="18" Grid.Row="18" Content="Parce GPX data"  Grid.ColumnSpan="3" BorderBrush="#FF481616" Foreground="White"  FontSize="12" Click="BtnCreatePgxFile_Click">
+        <Button x:Name="BtnCreatePgxFile" Grid.Column="18" Grid.Row="18" Content="Parce GPX data"  Grid.ColumnSpan="3" BorderBrush="#FF481616" Foreground="White"  FontSize="12" Click="BtnCreatePgxFile_Click" Style="{StaticResource ButtonStyleGreen}">
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                     <GradientStop Color="#FF939793" Offset="0"/>
