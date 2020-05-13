@@ -11,9 +11,10 @@ namespace RaakadataLibrary
     {
         private XmlDocument doc;
         private XmlNode rootNode;
+        private DateTime metaDataRaceTime;
 
 
-        public SeamodeGpxWriter()
+        public SeamodeGpxWriter(DateTime raceTime)
         {
             doc = new XmlDocument();
             rootNode = doc.CreateElement("gpx");
@@ -24,6 +25,8 @@ namespace RaakadataLibrary
             rootNode.Attributes.Append(creator);
             rootNode.Attributes.Append(xmlns);
             doc.AppendChild(rootNode);
+
+            metaDataRaceTime = raceTime;
         }
         public void writeGpx(List<GpxLine> gpxRivit)
         {
@@ -75,11 +78,16 @@ namespace RaakadataLibrary
             XmlNode metaDataText = doc.CreateElement("text");
             XmlNode metaDataAika = doc.CreateElement("time");
             metaDataText.InnerText = "GPX model trial";
-            metaDataAika.InnerText = "2019-09-28T11:30:43Z";
+            //metaDataAika.InnerText = "2019-09-28T11:30:43Z";
+            metaDataAika.InnerText = getRaceTimeFormatted();
             metaDataLink.AppendChild(metaDataText);
             metaData.AppendChild(metaDataLink);
             metaData.AppendChild(metaDataAika);
             rootNode.AppendChild(metaData);
+        }
+        private string getRaceTimeFormatted()
+        {
+            return metaDataRaceTime.ToString("s") + "Z";
         }
 
     }

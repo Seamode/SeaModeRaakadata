@@ -36,11 +36,13 @@ namespace RaakadataLibrary
         private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(1);
         private DateTime? prevEventTime = null;
         private readonly string headerRowPattern = "^Date_PC(.*)Time_PC";
+        private char erotinChar = ';'; 
 
         public string TmpFile = Path.GetTempFileName();
         public List<GpxLine> gpxLines { get; set; }
         public int DataRowCount { get; private set; } = 0;
         public List<string> DataRowErrors { get; private set; }
+        public DateTime gpxRaceTime { get; private set;}
         // jotta käyttöliittymä ei lukkiudu tiedoston luku ja kirjoituksen ajaksi
         public async Task ReadAndWriteFilesAsync(string path) => await Task.Run(() => ForeachFileIn(FetchFilesToRead(path)));
 
@@ -160,6 +162,8 @@ namespace RaakadataLibrary
                     else if (headerMatch.Success)
                     {
                         separator[0] = headerMatch.Groups[1].ToString();
+                        char[] chArray = separator[0].ToCharArray();
+                        erotinChar = chArray[0];
                         headersFound = true;
                     }
                     break;
@@ -170,32 +174,45 @@ namespace RaakadataLibrary
 
         public void haeGpxData(string fileName)
         {
-            string[] seperator = { ";" };
-            bool isOtsikkoOhi = false;
+            string[] separator = { ";" };
+            bool validFile = true;
+            bool headersFound = false;
+            List<string> headerRows = new List<string>();
+            int rowNum = 1;
             using (StreamReader sr = File.OpenText(fileName))
             {
-                string luettu = "";
+                string row = "";
                 DateTime prevDateTime = DateTime.MinValue;
-                while ((luettu = sr.ReadLine()) != null)
+                while ((row = sr.ReadLine()) != null)
                 {
-                    string[] rowValues = luettu.Split(seperator, StringSplitOptions.RemoveEmptyEntries);
-                    if (isOtsikkoOhi && TimeValidation(rowValues))
+                    if (headersFound)
                     {
-                        //Nullable<DateTime> prevDateTime = null;
-                        DateTime newDateTime;
-                        // Tehdään gpx instanssin luonti sekunnin välein
-                        newDateTime = muodostoGpxAika(luettu);
-                        TimeSpan tp = newDateTime - prevDateTime;
-                        if (tp.TotalSeconds >= 1)
+                        string[] rowValues = row.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+                        if (TimeValidation(rowValues))
                         {
-                            TeeGpx(luettu);
-                            prevDateTime = muodostoGpxAika(luettu);
+                            DateTime newDateTime;
+                            // Tehdään gpx instanssin luonti sekunnin välein
+                            newDateTime = muodostoGpxAika(row);
+                            TimeSpan tp = newDateTime - prevDateTime;
+                            if (tp.TotalSeconds >= 1)
+                            {
+                                TeeGpx(row);
+                                prevDateTime = muodostoGpxAika(row);
+                                // Aloitusaika otsikolle
+                                if(gpxRaceTime == DateTime.MinValue)
+                                {
+                                    gpxRaceTime = prevDateTime;
+                                }
+                            }
                         }
+                        /*if (Regex.IsMatch(row, headerRowPattern))
+                        {
+                            headersFound = true;
+                        }*/
                     }
-                    if (Regex.IsMatch(luettu, headerRowPattern))
-                    {
-                        isOtsikkoOhi = true;
-                    }
+                    else
+                        FileValidation(headerRows, rowNum, row, ref validFile, ref headersFound, ref separator);
+                    rowNum++;
                 }
             }
         }
@@ -205,7 +222,7 @@ namespace RaakadataLibrary
             if (gpxLines == null)
                 gpxLines = new List<GpxLine>();
 
-            string[] arvot = luettuRivi.Split(';');
+            string[] arvot = luettuRivi.Split(erotinChar);
             DateTime aika = DateTime.ParseExact(arvot[23] + " " + arvot[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
             //GpxLine gpxLine = new GpxLine(aika, arvot[25], arvot[27], arvot[29]);  
             GpxLine gpxLine = new GpxLine(aika);
@@ -248,8 +265,18 @@ namespace RaakadataLibrary
 
         private DateTime muodostoGpxAika(string luettuRivi)
         {
-            string[] arvot = luettuRivi.Split(';');
-            DateTime aika = DateTime.ParseExact(arvot[23] + " " + arvot[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
+            // Väärä erotinmerkki
+            string[] arvot = luettuRivi.Split(erotinChar);
+            DateTime aika;
+            try
+            {
+                aika = DateTime.ParseExact(arvot[23] + " " + arvot[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
+            }
+            catch (System.IndexOutOfRangeException e)
+            {
+                // Laitetaan ajalle jokin outo arvo, jos rikkinäinen data
+                aika = DateTime.MinValue;
+            }
             return aika;
         }
     }

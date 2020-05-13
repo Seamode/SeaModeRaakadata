@@ -25,7 +25,7 @@ namespace RaakadataLibrary
                 longitudeIn = longitudeIn.TrimStart(new Char[] { '0' });
             }
             // Poistetaan alkuperäinen piste
-            if (Regex.IsMatch(longitudeIn, "^[0-6][0-9][0-9].*"))
+            if (Regex.IsMatch(longitudeIn, "^[0-6][0-9][0-9][/.]*"))
             {
              longitudeIn = longitudeIn.Replace(".", "");
             }
