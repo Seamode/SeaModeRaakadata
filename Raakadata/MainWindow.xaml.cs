@@ -33,6 +33,7 @@ namespace Raakadata
         public MainWindow()
         {
             InitializeComponent();
+            //tbEventFilePath.Visibility = Visibility.Hidden;
             string defaultPath = FindDatDirectory();
             tbFolderPath.Text = defaultPath;
             tbSavePath.Text = defaultPath;
