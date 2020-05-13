@@ -360,7 +360,7 @@ namespace Raakadata
             }
             else
             {
-                if (lblValidationError.Content.ToString().StartsWith("Please re-enter a"))
+                if (lblValidationError.Content != null && lblValidationError.Content.ToString().StartsWith("Please re-enter a"))
                     lblValidationError.ClearValue(ContentProperty);
             }
             if (tb == tbEventStartTime)
