@@ -18,6 +18,7 @@ using Ookii.Dialogs.Wpf;
 using System.Text.RegularExpressions;
 using System.IO;
 using System.Reflection;
+using Microsoft.Win32;
 
 namespace Raakadata
 {
@@ -80,11 +81,11 @@ namespace Raakadata
         private async void BtnCreateEventFile_Click(object sender, RoutedEventArgs e)
         {
             // jotta ei tapahdu tupla klikkausta.
-            BtnCreatePgxFile.IsEnabled = false;
+            BtnCreateGpxFile.IsEnabled = false;
             BtnCreateEventFile.IsEnabled = false;
             if (!ValidateParameters(out TimeSpan startTime, out TimeSpan endTime))
             {
-                BtnCreatePgxFile.IsEnabled = true;
+                BtnCreateGpxFile.IsEnabled = true;
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
@@ -92,7 +93,7 @@ namespace Raakadata
             // ei pitäisi päästä tähän, jos on virheellisesti syötetty.
             if (!ValidTimePeriod(startTime, endTime, out DateTime eventStart, out DateTime eventEnd))
             {
-                BtnCreatePgxFile.IsEnabled = true;
+                BtnCreateGpxFile.IsEnabled = true;
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
@@ -110,22 +111,25 @@ namespace Raakadata
             if (sr.DataRowCount == 0)
             {
                 MessageBox.Show("No data found for specified time period.");
-                BtnCreatePgxFile.IsEnabled = true;
+                BtnCreateGpxFile.IsEnabled = true;
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
             // kisatiedoston luonti
             File.Move(sr.TmpFile, tbEventFilePath.Text);
+            StringBuilder msg = new StringBuilder();
+            msg.AppendLine($"File {tbEventFilePath.Text} was created.");
             if (!sr.PastEnd)
+                msg.AppendLine("Data logging ended before the specified endpoint.");
+            foreach (string line in sr.DataRowErrors)
             {
-                MessageBox.Show("The data ended before the specified endpoint");
+                msg.AppendLine(line);
             }
-            if (sr.DataRowErrors.Count > 0)
-            {
-                MessageBox.Show($"{string.Join("\n", sr.DataRowErrors)}");
-            }
-            MessageBox.Show($"File {tbEventFilePath.Text} was created.");
-            BtnCreatePgxFile.IsEnabled = true;
+            msg.AppendLine("Would you like to open the folder?");
+            var res = MessageBox.Show(msg.ToString(), "File Created.", MessageBoxButton.YesNo);
+            if (res == MessageBoxResult.Yes)
+                System.Diagnostics.Process.Start(tbSavePath.Text);
+            BtnCreateGpxFile.IsEnabled = true;
             BtnCreateEventFile.IsEnabled = true;
             // syötetyt arvot tyhjennetään
             ResetUI();
@@ -347,10 +351,16 @@ namespace Raakadata
             if (!Regex.IsMatch(tb.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
             {
                 tb.Text = timePlacehoder;
+                tb.BorderBrush = Brushes.Red;
                 if (tb == tbEventStartTime)
-                    MessageBox.Show("Please re-enter a start time again.");
+                    lblValidationError.Content = "Please re-enter a start time again.";
                 else if (tb == tbEventEndTime)
-                    MessageBox.Show("Please re-enter an end time again.");
+                    lblValidationError.Content = "Please re-enter an end time again.";
+            }
+            else
+            {
+                if (lblValidationError.Content.ToString().StartsWith("Please re-enter a"))
+                    lblValidationError.ClearValue(ContentProperty);
             }
             if (tb == tbEventStartTime)
                 UpdateEventFilePath();
@@ -359,11 +369,11 @@ namespace Raakadata
         private async void BtnCreatePgxFile_Click(object sender, RoutedEventArgs e)
         {
             // jotta ei tapahdu tupla klikkausta.
-            BtnCreatePgxFile.IsEnabled = false;
+            BtnCreateGpxFile.IsEnabled = false;
             BtnCreateEventFile.IsEnabled = false;
             if (!ValidateParameters(out TimeSpan startTime, out TimeSpan endTime))
             {
-                BtnCreatePgxFile.IsEnabled = true;
+                BtnCreateGpxFile.IsEnabled = true;
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
@@ -371,7 +381,7 @@ namespace Raakadata
             // ei pitäisi päästä tähän, jos on virheellisesti syötetty.
             if (!ValidTimePeriod(startTime, endTime, out DateTime eventStart, out DateTime eventEnd))
             {
-                BtnCreatePgxFile.IsEnabled = true;
+                BtnCreateGpxFile.IsEnabled = true;
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
@@ -396,7 +406,7 @@ namespace Raakadata
                 Cursor = tempCursor;
                 ForceCursor = false;
                 MessageBox.Show("No data found for specified time period.");
-                BtnCreatePgxFile.IsEnabled = true;
+                BtnCreateGpxFile.IsEnabled = true;
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
@@ -413,13 +423,20 @@ namespace Raakadata
             {
                 MessageBox.Show($"{string.Join("\n", sr.DataRowErrors)}");
             }
-            BtnCreatePgxFile.IsEnabled = true;
+            BtnCreateGpxFile.IsEnabled = true;
             BtnCreateEventFile.IsEnabled = true;
             // syötetyt arvot tyhjennetään
             ResetUI();
             ListFilesInFolder();
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e) => ResetUI();
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFile = new OpenFileDialog() { Filter = "CSV Files (*.csv)|*.csv" };
+            if (openFile.ShowDialog() == true)
+            {
+                MessageBox.Show($"sr.HaeGpxData({openFile.FileName});\ngwr.WriteGpx(sr.GpxLines);");
+            }
+        }
     }
 }
