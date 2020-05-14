@@ -9,7 +9,7 @@
         MinHeight="400" MinWidth="650" 
         WindowStartupLocation="CenterScreen"
         Title="SeaMODEParcer™ v1.0" Height="560" Width="810" BorderThickness="2" >
-    <Grid x:Name="TextBox" Margin="0" Background="#FF202020">
+    <Grid Margin="0" Background="#FF202020">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="220*" />
             <ColumnDefinition Width="5" />
@@ -93,7 +93,7 @@
                 </LinearGradientBrush>
             </Button.Background>
         </Button>
-        <Button x:Name="BtnCreateGpxFile" Grid.Column="18" Grid.Row="18" Content="Parce GPX data"  Grid.ColumnSpan="3" BorderBrush="#FF481616" Foreground="White"  FontSize="12" Click="BtnCreatePgxFile_Click" Style="{StaticResource ButtonStyleGreen}">
+        <Button x:Name="BtnCreateGpxFile" Grid.Column="18" Grid.Row="18" Content="Parce GPX data"  Grid.ColumnSpan="3" BorderBrush="#FF481616" Foreground="White"  FontSize="12" Click="BtnCreateGpxFile_Click" Style="{StaticResource ButtonStyleGreen}">
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                     <GradientStop Color="#FF939793" Offset="0"/>

@@ -48,6 +48,8 @@ namespace Raakadata
         {
             if (Directory.Exists(ConfigurationManager.AppSettings["fileDirectory"]))
                 return ConfigurationManager.AppSettings["fileDirectory"];
+            //string altPath = Directory.GetParent(Assembly.GetExecutingAssembly().Location).ToString();
+            //string altPath = System.IO.Path.GetDirectoryName(Environment.GetCommandLineArgs()[0]);
             string altPath = System.IO.Path.GetDirectoryName(
                 System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
             // ylempi pitäisi palauttaa prg, alla se vaihdetaan dat
@@ -98,6 +100,21 @@ namespace Raakadata
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
+            // Tarkistaa onko samannimistä tiedostoa kansiossa, jos on kysyy halutaanko sen päälle kirjoittaa.
+            //string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventEndDate.SelectedDate}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.csv";
+            if (File.Exists(tbEventFilePath.Text))
+            {
+                var anws = MessageBox.Show("A file with that name already exists.\nIf you perceed, the file will be overwritten.\nDo you want to proceed?", "Warning, File Exists.", MessageBoxButton.YesNo);
+                if (anws == MessageBoxResult.No)
+                {
+                    BtnCreateGpxFile.IsEnabled = true;
+                    BtnCreateEventFile.IsEnabled = true;
+                    tbEventName.Focus();
+                    return;
+                }
+                else
+                    File.Delete(tbEventFilePath.Text);
+            }
             // Muutetaan kursori kertomaan käyttäjälle käynnissä olevasta datan käsittelystä.
             Cursor tempCursor = Cursor;
             Cursor = Cursors.Wait;
@@ -118,6 +135,7 @@ namespace Raakadata
             }
             // kisatiedoston luonti
             File.Move(sr.TmpFile, tbEventFilePath.Text);
+            // Ilmoitus luonnista ja mahdolliset virheet.
             StringBuilder msg = new StringBuilder();
             msg.AppendLine($"File {tbEventFilePath.Text} was created.");
             if (!sr.PastEnd)
@@ -128,6 +146,7 @@ namespace Raakadata
             }
             msg.AppendLine("Would you like to open the folder?");
             var res = MessageBox.Show(msg.ToString(), "File Created.", MessageBoxButton.YesNo);
+            // avaa File Explorerin
             if (res == MessageBoxResult.Yes)
                 System.Diagnostics.Process.Start(tbSavePath.Text);
             BtnCreateGpxFile.IsEnabled = true;
@@ -157,43 +176,36 @@ namespace Raakadata
             if (dpEventStartDate.SelectedDate == null)
             {
                 dpEventStartDate.BorderBrush = Brushes.Red;
-                //MessageBox.Show("Please select start and end dates for the race.");
                 valid = false;
             }
             if (dpEventEndDate.SelectedDate == null)
             {
                 dpEventEndDate.BorderBrush = Brushes.Red;
-                //MessageBox.Show("Please select start and end dates for the race.");
                 valid = false;
             }
             if (!TimeSpan.TryParse(tbEventStartTime.Text, out startTime))
             {
                 tbEventStartTime.BorderBrush = Brushes.Red;
-                //MessageBox.Show("Please enter start and end times for the race.");
                 valid = false;
             }
             if (!TimeSpan.TryParse(tbEventEndTime.Text, out endTime))
             {
                 tbEventEndTime.BorderBrush = Brushes.Red;
-                //MessageBox.Show("Please enter start and end times for the race.");
                 valid = false;
             }
             if (string.IsNullOrEmpty(tbEventName.Text))
             {
                 tbEventName.BorderBrush = Brushes.Red;
-                //MessageBox.Show("Please enter a name for the race.");
                 valid = false;
             }
             if (string.IsNullOrEmpty(tbFolderPath.Text) || !Directory.Exists(tbFolderPath.Text))
             {
                 tbFolderPath.BorderBrush = Brushes.Red;
-                //MessageBox.Show("Please enter a folder for the files");
                 valid = false;
             }
             if (string.IsNullOrEmpty(tbSavePath.Text) || !Directory.Exists(tbSavePath.Text))
             {
                 tbSavePath.BorderBrush = Brushes.Red;
-                //MessageBox.Show("Please enter a folder for the files");
                 valid = false;
             }
             if (!valid)
@@ -311,18 +323,6 @@ namespace Raakadata
                 tb.Clear();
         }
 
-        private void Button_Click_1(object sender, RoutedEventArgs e)
-        {
-            string s = System.IO.Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
-            //string s = Directory.GetParent(Assembly.GetExecutingAssembly().Location).ToString();
-            //string s = System.IO.Path.GetDirectoryName(Environment.GetCommandLineArgs()[0]);
-            if (s.EndsWith("prg"))
-            {
-                s = s.Replace("prg", "dat");
-            }
-            MessageBox.Show(s);
-        }
-
         private void DpEventDate_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
         {
             DatePicker dp = e.Source as DatePicker;
@@ -367,7 +367,7 @@ namespace Raakadata
                 UpdateEventFilePath();
         }
 
-        private async void BtnCreatePgxFile_Click(object sender, RoutedEventArgs e)
+        private async void BtnCreateGpxFile_Click(object sender, RoutedEventArgs e)
         {
             // jotta ei tapahdu tupla klikkausta.
             BtnCreateGpxFile.IsEnabled = false;
@@ -413,17 +413,25 @@ namespace Raakadata
             }
 
             SeamodeGpxWriter wr = new SeamodeGpxWriter(sr.gpxRaceTime);
-            
+            //string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventEndDate.SelectedDate}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.GPX";
             await Task.Run(() => wr.writeGpx(sr.gpxLines));
 
             Cursor = tempCursor;
             ForceCursor = false;
 
-            MessageBox.Show($"File {ConfigurationManager.AppSettings["gpxFile"]} was created.");
-            if (sr.DataRowErrors.Count > 0)
+            StringBuilder msg = new StringBuilder();
+            msg.AppendLine($"File {"file name here"} was created.");
+            //if (!sr.PastEnd)
+            //    msg.AppendLine("Data logging ended before the specified endpoint.");
+            foreach (string line in sr.DataRowErrors)
             {
-                MessageBox.Show($"{string.Join("\n", sr.DataRowErrors)}");
+                msg.AppendLine(line);
             }
+            msg.AppendLine("Would you like to open the folder?");
+            var res = MessageBox.Show(msg.ToString(), "File Created.", MessageBoxButton.YesNo);
+            if (res == MessageBoxResult.Yes)
+                System.Diagnostics.Process.Start(tbSavePath.Text);
+
             BtnCreateGpxFile.IsEnabled = true;
             BtnCreateEventFile.IsEnabled = true;
             // syötetyt arvot tyhjennetään
