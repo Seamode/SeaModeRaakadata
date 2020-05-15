@@ -59,12 +59,9 @@ namespace RaakadataLibrary
         {
             List<string> files = new List<string>();
             DirectoryInfo di = new DirectoryInfo(path);
-            string example = "SeaMODE_20190928_112953.csv";
-            int len = example.Length;
-            foreach (var fi in di.GetFiles())
+            foreach (var fi in di.GetFiles("*.csv"))
             {
-                if (Regex.IsMatch(fi.Name, "^SeaMODE_") && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == len)
-                    files.Add(fi.Name);
+                files.Add(fi.Name);
             }
 
             return files;

@@ -33,7 +33,6 @@ namespace Raakadata
         public MainWindow()
         {
             InitializeComponent();
-            //tbEventFilePath.Visibility = Visibility.Hidden;
             string defaultPath = FindDatDirectory();
             tbFolderPath.Text = defaultPath;
             tbSavePath.Text = defaultPath;
@@ -101,8 +100,8 @@ namespace Raakadata
                 return;
             }
             // Tarkistaa onko samannimistä tiedostoa kansiossa, jos on kysyy halutaanko sen päälle kirjoittaa.
-            //string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventEndDate.SelectedDate}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.csv";
-            if (File.Exists(tbEventFilePath.Text))
+            string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventEndDate.SelectedDate}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.csv";
+            if (File.Exists(fullFilePath))
             {
                 var anws = MessageBox.Show("A file with that name already exists.\nIf you perceed, the file will be overwritten.\nDo you want to proceed?", "Warning, File Exists.", MessageBoxButton.YesNo);
                 if (anws == MessageBoxResult.No)
@@ -113,7 +112,7 @@ namespace Raakadata
                     return;
                 }
                 else
-                    File.Delete(tbEventFilePath.Text);
+                    File.Delete(fullFilePath);
             }
             // Muutetaan kursori kertomaan käyttäjälle käynnissä olevasta datan käsittelystä.
             Cursor tempCursor = Cursor;
@@ -134,10 +133,10 @@ namespace Raakadata
                 return;
             }
             // kisatiedoston luonti
-            File.Move(sr.TmpFile, tbEventFilePath.Text);
+            File.Move(sr.TmpFile, fullFilePath);
             // Ilmoitus luonnista ja mahdolliset virheet.
             StringBuilder msg = new StringBuilder();
-            msg.AppendLine($"File {tbEventFilePath.Text} was created.");
+            msg.AppendLine($"File {fullFilePath} was created.");
             if (!sr.PastEnd)
                 msg.AppendLine("Data logging ended before the specified endpoint.");
             foreach (string line in sr.DataRowErrors)
@@ -236,17 +235,6 @@ namespace Raakadata
         {
             TextBox tb = e.Source as TextBox;
             tb.ClearValue(BorderBrushProperty);
-            if (tb == tbSavePath || tb == tbEventName)
-                UpdateEventFilePath();
-        }
-
-        private void UpdateEventFilePath()
-        {
-            string polku = tbSavePath == null ? "<Path>" : tbSavePath.Text;
-            string pvm = dpEventStartDate.SelectedDate == null ? "<Date>" : $"{dpEventStartDate.SelectedDate:yyyyMMdd}";
-            string aika = tbEventStartTime.Text == timePlacehoder ? "<Time>" : string.Join("", tbEventStartTime.Text.Split(':', '.'));
-            string nimi = string.IsNullOrEmpty(tbEventName.Text) ? "<RaceName>" : tbEventName.Text;
-            tbEventFilePath.Text = $"{polku}\\SeaMODE_{pvm}_{aika}_{nimi}.csv";
         }
 
         private void TbTime_TextChanged(object sender, TextChangedEventArgs e)
@@ -327,12 +315,8 @@ namespace Raakadata
         {
             DatePicker dp = e.Source as DatePicker;
             dp.ClearValue(BorderBrushProperty);
-            if (dp == dpEventStartDate)
-            {
-                if (dp.SelectedDate != null)
-                    dpEventEndDate.DisplayDate = (DateTime)dp.SelectedDate; 
-                UpdateEventFilePath();
-            }
+            if (dp.SelectedDate != null && dp == dpEventStartDate)
+                dpEventEndDate.DisplayDate = (DateTime)dp.SelectedDate; 
         }
 
         private void TbTime_LostFocus(object sender, RoutedEventArgs e)
@@ -363,8 +347,6 @@ namespace Raakadata
                 if (lblValidationError.Content != null && lblValidationError.Content.ToString().StartsWith("Please re-enter a"))
                     lblValidationError.ClearValue(ContentProperty);
             }
-            if (tb == tbEventStartTime)
-                UpdateEventFilePath();
         }
 
         private async void BtnCreateGpxFile_Click(object sender, RoutedEventArgs e)
