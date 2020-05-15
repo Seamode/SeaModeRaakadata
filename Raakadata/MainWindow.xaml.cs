@@ -100,7 +100,7 @@ namespace Raakadata
                 return;
             }
             // Tarkistaa onko samannimistä tiedostoa kansiossa, jos on kysyy halutaanko sen päälle kirjoittaa.
-            string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventEndDate.SelectedDate}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.csv";
+            string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventEndDate.SelectedDate:yyyyMMdd}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.csv";
             if (File.Exists(fullFilePath))
             {
                 var anws = MessageBox.Show("A file with that name already exists.\nIf you perceed, the file will be overwritten.\nDo you want to proceed?", "Warning, File Exists.", MessageBoxButton.YesNo);
@@ -163,7 +163,7 @@ namespace Raakadata
             eventEnd = eventEnd.Add(endTime);
             if (eventEnd <= eventStart)
             {
-                MessageBox.Show("Check the dates and times.\nRace start must be before the ending.");
+                lblEventLengthError.Content = "Event start must be before the ending.";
                 return false;
             }
             return true;
@@ -175,40 +175,45 @@ namespace Raakadata
             if (dpEventStartDate.SelectedDate == null)
             {
                 dpEventStartDate.BorderBrush = Brushes.Red;
+                lblEventStartDateError.Content = "Date required";
                 valid = false;
             }
             if (dpEventEndDate.SelectedDate == null)
             {
                 dpEventEndDate.BorderBrush = Brushes.Red;
+                lblEventEndDateError.Content = "Date required";
                 valid = false;
             }
             if (!TimeSpan.TryParse(tbEventStartTime.Text, out startTime))
             {
                 tbEventStartTime.BorderBrush = Brushes.Red;
+                lblEventStartTimeError.Content = "Time required";
                 valid = false;
             }
             if (!TimeSpan.TryParse(tbEventEndTime.Text, out endTime))
             {
                 tbEventEndTime.BorderBrush = Brushes.Red;
+                lblEventEndTimeError.Content = "Time required";
                 valid = false;
             }
             if (string.IsNullOrEmpty(tbEventName.Text))
             {
                 tbEventName.BorderBrush = Brushes.Red;
+                lblEventNameError.Content = "Name for file required";
                 valid = false;
             }
             if (string.IsNullOrEmpty(tbFolderPath.Text) || !Directory.Exists(tbFolderPath.Text))
             {
                 tbFolderPath.BorderBrush = Brushes.Red;
+                lblFolderPathError.Content = "Valid folder path required";
                 valid = false;
             }
             if (string.IsNullOrEmpty(tbSavePath.Text) || !Directory.Exists(tbSavePath.Text))
             {
                 tbSavePath.BorderBrush = Brushes.Red;
+                lblSavePathError.Content = "Valid folder path required";
                 valid = false;
             }
-            if (!valid)
-                lblValidationError.Content = "* Correction(s) needed for highlighted field(s)! *";
             return valid;
         }
 
@@ -228,13 +233,26 @@ namespace Raakadata
             tbEventStartTime.ClearValue(BorderBrushProperty);
             tbEventEndTime.ClearValue(BorderBrushProperty);
             tbEventName.ClearValue(BorderBrushProperty);
-            lblValidationError.ClearValue(ContentProperty);
+            lblFolderPathError.ClearValue(ContentProperty);
+            lblSavePathError.ClearValue(ContentProperty);
+            lblEventStartDateError.ClearValue(ContentProperty);
+            lblEventStartTimeError.ClearValue(ContentProperty);
+            lblEventEndDateError.ClearValue(ContentProperty);
+            lblEventEndTimeError.ClearValue(ContentProperty);
+            lblEventLengthError.ClearValue(ContentProperty);
+            lblEventNameError.ClearValue(ContentProperty);
         }
 
         private void TbFile_TextChanged(object sender, TextChangedEventArgs e)
         {
             TextBox tb = e.Source as TextBox;
             tb.ClearValue(BorderBrushProperty);
+            if (tb == tbFolderPath)
+                lblFolderPathError.ClearValue(ContentProperty);
+            else if (tb == tbSavePath)
+                lblSavePathError.ClearValue(ContentProperty);
+            else if (tb == tbEventName)
+                lblEventNameError.ClearValue(ContentProperty);
         }
 
         private void TbTime_TextChanged(object sender, TextChangedEventArgs e)
@@ -315,6 +333,10 @@ namespace Raakadata
         {
             DatePicker dp = e.Source as DatePicker;
             dp.ClearValue(BorderBrushProperty);
+            if (dp == dpEventStartDate)
+                lblEventStartDateError.ClearValue(ContentProperty);
+            else if (dp == dpEventEndDate)
+                lblEventEndDateError.ClearValue(ContentProperty);
             if (dp.SelectedDate != null && dp == dpEventStartDate)
                 dpEventEndDate.DisplayDate = (DateTime)dp.SelectedDate; 
         }
@@ -338,14 +360,16 @@ namespace Raakadata
                 tb.Text = timePlacehoder;
                 tb.BorderBrush = Brushes.Red;
                 if (tb == tbEventStartTime)
-                    lblValidationError.Content = "Please re-enter a start time again.";
+                    lblEventStartTimeError.Content = "Please re-enter a valid time.";
                 else if (tb == tbEventEndTime)
-                    lblValidationError.Content = "Please re-enter an end time again.";
+                    lblEventEndTimeError.Content = "Please re-enter a valid time.";
             }
             else
             {
-                if (lblValidationError.Content != null && lblValidationError.Content.ToString().StartsWith("Please re-enter a"))
-                    lblValidationError.ClearValue(ContentProperty);
+                if (tb == tbEventStartTime)
+                    lblEventStartTimeError.ClearValue(ContentProperty);
+                else if (tb == tbEventEndTime)
+                    lblEventEndTimeError.ClearValue(ContentProperty);
             }
         }
 
