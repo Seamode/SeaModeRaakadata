@@ -82,7 +82,11 @@
                 </LinearGradientBrush>
             </Button.Background>
         </Button>
-        <TextBox x:Name="tbFilesInFolder" Grid.Column="2" Grid.Row="12" Grid.ColumnSpan="9" Text="" Grid.RowSpan="5" IsReadOnly="True" BorderBrush="#FF303030" />
+        <ListBox x:Name="tbFilesInFolder" SelectionMode="Multiple" Grid.Column="2" Grid.Row="12" Grid.ColumnSpan="9" Grid.RowSpan="5" BorderBrush="#FF303030" SelectionChanged="tbFilesInFolder_SelectionChanged">
+            <ListBoxItem x:Name="lbiCheckBox" IsEnabled="false">
+                <CheckBox x:Name="cbSelectAll" IsEnabled="false" Checked="ListBox_SelectAll" Unchecked="ListBox_UnselectAll">Select All</CheckBox>
+            </ListBoxItem>
+        </ListBox>
         <TextBox x:Name="tbEventFilePath" Grid.Column="14" Grid.Row="12" Grid.ColumnSpan="9" Text="" Grid.RowSpan="5" IsReadOnly="True" BorderBrush="#FF303030" />
         <Label Grid.Column="2" Grid.Row="7" Content="Parce From:"  Grid.ColumnSpan="7"  Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="14" Grid.Row="7" Content="Parce To:"  Grid.ColumnSpan="7"   Foreground="White" FontSize="12" Background="#FF303030"/>

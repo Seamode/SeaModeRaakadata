@@ -18,6 +18,7 @@ using Ookii.Dialogs.Wpf;
 using System.Text.RegularExpressions;
 using System.IO;
 using System.Reflection;
+using System.Globalization;
 
 namespace Raakadata
 {
@@ -26,6 +27,8 @@ namespace Raakadata
     /// </summary>
     public partial class MainWindow : Window
     {
+        List<DateTime> minDTs = new List<DateTime>();
+        List<DateTime> maxDTs = new List<DateTime>();
         private int startTimeStringLocation;
         private int endTimeStringLocation;
         public MainWindow()
@@ -39,8 +42,53 @@ namespace Raakadata
             dpEventEndDate.DisplayDate = new DateTime(2019, 09, 28);
         }
 
-        private void ListFilesInFolder() =>
-            tbFilesInFolder.Text = string.Join("\r\n", SeamodeReader.FetchFilesToList(tbFolderPath.Text));
+        private void ListFilesInFolder()
+        {
+            if (tbFilesInFolder.Items.Count > 1)
+            {
+                tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+                cbSelectAll.Unchecked -= ListBox_UnselectAll;
+                cbSelectAll.IsChecked = false;
+                tbFilesInFolder.UnselectAll();
+
+                int itemCount = tbFilesInFolder.Items.Count;
+
+                for (int i = 0; i < itemCount;)
+                {
+                    if (tbFilesInFolder.Items[i] is string)
+                    {
+                        tbFilesInFolder.Items.Remove(tbFilesInFolder.Items[i]);
+                        --itemCount;
+                    }
+                    else
+                    {
+                        i++;
+                    }
+                }
+
+                minDTs.Clear();
+                maxDTs.Clear();
+
+                lbiCheckBox.IsEnabled = false;
+                cbSelectAll.IsEnabled = false;
+
+                cbSelectAll.Unchecked += ListBox_UnselectAll;
+                tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+            }
+
+            foreach (var file in SeamodeReader.FetchFilesToList(tbFolderPath.Text))
+            {
+                tbFilesInFolder.Items.Add(file);
+            }
+
+            if (tbFilesInFolder.Items.Count > 1)
+            {
+                PickDateTimes();
+
+                lbiCheckBox.IsEnabled = true;
+                cbSelectAll.IsEnabled = true;
+            }
+        }
 
         private void BtnSelectFolder_Click(object sender, RoutedEventArgs e)
         {
@@ -301,9 +349,12 @@ namespace Raakadata
             // tiedostojen luku
             SeamodeReader sr = new SeamodeReader(eventStart, eventEnd);
 
-            foreach (string tiedosto in sr.FetchFilesToRead(tbFolderPath.Text))
+            foreach (var item in tbFilesInFolder.SelectedItems)
             {
-                await Task.Run(() => sr.haeGpxData(tiedosto));
+                if (item is string)
+                {
+                    await Task.Run(() => sr.haeGpxData((string)item));
+                }
             }
 
             // muuten tulee tyhjä tiedosto
@@ -339,6 +390,199 @@ namespace Raakadata
             tbEventEndTime.Text = "HH:mm:ss";
             tbEventName.Clear();
             ListFilesInFolder();
+        }
+
+        void PickDateTimes()
+        {
+            for (int i = 1; i < tbFilesInFolder.Items.Count; i++)
+            {
+                using (FileStream fileStream = new FileStream((string)tbFilesInFolder.Items[i], FileMode.Open, FileAccess.Read))
+                {
+                    fileStream.Seek(0, SeekOrigin.Begin);
+                    bool isDigit = false;
+                    bool isNewLine = false;
+                    char delim = ';';
+
+                    while (!isDigit)
+                    {
+                        char c = Convert.ToChar(fileStream.ReadByte());
+
+                        if (isNewLine && char.IsDigit(c))
+                        {
+                            List<char> stringBuilder = new List<char>();
+                            isDigit = true;
+                            isNewLine = false;
+
+                            stringBuilder.Add(c);
+
+                            while ((c = Convert.ToChar(fileStream.ReadByte())) != delim)
+                            {
+                                stringBuilder.Add(c);
+                            }
+
+                            string tempDateTimeStart = new string(stringBuilder.ToArray());
+                            stringBuilder.Clear();
+
+                            DateTime startDateTime = DateTime.Parse(tempDateTimeStart, CultureInfo.CreateSpecificCulture("fi-FI"));
+
+                            while ((c = Convert.ToChar(fileStream.ReadByte())) != delim)
+                            {
+                                stringBuilder.Add(c);
+                            }
+
+                            tempDateTimeStart = new string(stringBuilder.ToArray());
+
+                            startDateTime = startDateTime.Add(TimeSpan.Parse(tempDateTimeStart, CultureInfo.CreateSpecificCulture("fi-FI")));
+                            minDTs.Add(startDateTime);
+                        }
+                        else if (isNewLine && char.IsLetter(c))
+                        {
+                            isNewLine = false;
+
+                            delim = Convert.ToChar(fileStream.ReadByte());
+                            while (char.IsLetterOrDigit(delim) || delim == '_')
+                            {
+                                delim = Convert.ToChar(fileStream.ReadByte());
+                            }
+
+                            while (c != '\n')
+                            {
+                                c = Convert.ToChar(fileStream.ReadByte());
+                            }
+
+                            isNewLine = true;
+                        }
+                        else if (c == '\n')
+                        {
+                            isNewLine = true;
+                        }
+                    }
+
+                    Stack<char> stringBuilderStack = new Stack<char>();
+                    long offset = 2;
+                    isNewLine = false;
+
+                    while (!isNewLine)
+                    {
+                        fileStream.Seek(-offset, SeekOrigin.End);
+                        char c = Convert.ToChar(fileStream.ReadByte());
+
+                        if (c == '\n')
+                        {
+                            isNewLine = true;
+                        }
+                        else
+                        {
+                            stringBuilderStack.Push(c);
+                            offset++;
+                        }
+                    }
+
+                    string lastFileLine = new string(stringBuilderStack.ToArray());
+                    DateTime endDateTime = DateTime.Parse(lastFileLine.Substring(0, lastFileLine.IndexOf(delim)), CultureInfo.CreateSpecificCulture("fi-FI"));
+                    endDateTime = endDateTime.Add(TimeSpan.Parse(lastFileLine.Substring(lastFileLine.IndexOf(delim) + 1, lastFileLine.IndexOf(delim, lastFileLine.IndexOf(delim) + 1) - (lastFileLine.IndexOf(delim) + 1)), CultureInfo.CreateSpecificCulture("fi-FI")));
+
+                    if (endDateTime.Millisecond > 0)
+                    {
+                        endDateTime = endDateTime.AddSeconds(1);
+                    }
+
+                    maxDTs.Add(endDateTime);
+                }
+            }
+        }
+
+        private void UpdateDateTime()
+        {
+            if (tbFilesInFolder.SelectedItems.Count > 0)
+            {
+                DateTime minDate = DateTime.MaxValue;
+                DateTime maxDate = DateTime.MinValue;
+                List<int> selectedInds = new List<int>();
+
+                foreach (var selectedFile in tbFilesInFolder.SelectedItems)
+                {
+                    if (selectedFile is string)
+                    {
+                        selectedInds.Add(tbFilesInFolder.Items.IndexOf(selectedFile) - 1);
+                    }
+                }
+
+                foreach (var index in selectedInds)
+                {
+                    if (minDTs[index] < minDate)
+                    {
+                        minDate = minDTs[index];
+                    }
+
+                    if (maxDTs[index] > maxDate)
+                    {
+                        maxDate = maxDTs[index];
+                    }
+                }
+
+                dpEventStartDate.SelectedDate = minDate.Date;
+                dpEventEndDate.SelectedDate = maxDate.Date;
+
+                tbEventStartTime.Text = $"{minDate.Hour}:{minDate.Minute}:{minDate.Second}";
+                tbEventEndTime.Text = $"{maxDate.Hour}:{maxDate.Minute}:{maxDate.Second}";
+            }
+            else
+            {
+                dpEventStartDate.SelectedDate = null;
+                dpEventEndDate.SelectedDate = null;
+
+                tbEventStartTime.Text = "HH:mm:ss";
+                tbEventEndTime.Text = "HH:mm:ss";
+            }
+        }
+
+        private void tbFilesInFolder_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (e.RemovedItems.Contains(lbiCheckBox))
+            {
+                cbSelectAll.IsChecked = false;
+            }
+            else if (e.AddedItems.Contains(lbiCheckBox))
+            {
+                cbSelectAll.IsChecked = true;
+            }
+            else if (lbiCheckBox.IsSelected && tbFilesInFolder.SelectedItems.Count == tbFilesInFolder.Items.Count - 1)
+            {
+                cbSelectAll.Unchecked -= ListBox_UnselectAll;
+                cbSelectAll.IsChecked = false;
+                cbSelectAll.Unchecked += ListBox_UnselectAll;
+
+                tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+                lbiCheckBox.IsSelected = false;
+                tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+                UpdateDateTime();
+            }
+            else if (!lbiCheckBox.IsSelected && tbFilesInFolder.SelectedItems.Count == tbFilesInFolder.Items.Count - 1)
+            {
+                cbSelectAll.IsChecked = true;
+            }
+            else
+            {
+                UpdateDateTime();
+            }
+
+        }
+
+        private void ListBox_SelectAll(object sender, RoutedEventArgs e)
+        {
+            tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+            tbFilesInFolder.SelectAll();
+            UpdateDateTime();
+            tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+        }
+
+        private void ListBox_UnselectAll(object sender, RoutedEventArgs e)
+        {
+            tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+            tbFilesInFolder.UnselectAll();
+            UpdateDateTime();
+            tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
         }
     }
 }
