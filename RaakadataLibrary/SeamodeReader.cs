@@ -64,7 +64,7 @@ namespace RaakadataLibrary
             foreach (var fi in di.GetFiles())
             {
                 if (Regex.IsMatch(fi.Name, "^SeaMODE_") && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == len)
-                    files.Add(fi.FullName);
+                    files.Add(fi.Name);
             }
 
             return files;
