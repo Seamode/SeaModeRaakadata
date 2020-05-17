@@ -29,6 +29,8 @@ namespace Raakadata
     {
         List<DateTime> minDTs = new List<DateTime>();
         List<DateTime> maxDTs = new List<DateTime>();
+        int prevCaretIndex = -1;
+        string prevText;
         private int startTimeStringLocation;
         private int endTimeStringLocation;
         public MainWindow()
@@ -185,75 +187,101 @@ namespace Raakadata
 
         private void TbTime_TextChanged(object sender, TextChangedEventArgs e)
         {
-            TextBox tb = e.Source as TextBox;
-            if (tb.Text == "HH:mm:ss" || string.IsNullOrEmpty(tb.Text))
+            TextBox tbTime = e.Source as TextBox;
+            const string template = "__:__:__";
+
+            tbTime.SelectionChanged -= TbTime_SelectionChanged;
+            tbTime.TextChanged -= TbTime_TextChanged;
+
+            if (tbTime.IsFocused)
             {
-                if (tb == tbEventStartTime)
-                    startTimeStringLocation = 0;
-                else if (tb == tbEventEndTime)
-                    endTimeStringLocation = 0;
-                return;
+                foreach (var change in e.Changes)
+                {
+                    if (change.AddedLength > 0)
+                    {
+                        char addedChar = tbTime.Text.Substring(change.Offset, change.AddedLength)[0];
+
+                        if (!char.IsDigit(addedChar))
+                        {
+                            tbTime.Text = prevText;
+                            tbTime.CaretIndex = change.Offset;
+                            tbTime.SelectionLength = 1;
+                        }
+                        else
+                        {
+                            char[] maxValue = null;
+                            char conv;
+
+                            switch (change.Offset)
+                            {
+                                case 0 when int.Parse(addedChar.ToString()) == 2 && int.Parse(char.IsDigit(conv = tbTime.Text[1]) ? conv.ToString() : "0") > 3:
+                                    "3".CopyTo(0, maxValue = tbTime.Text.ToArray(), 1, 1);
+                                    goto CopyValue;
+
+                                case 0 when int.Parse(addedChar.ToString()) > 2:
+                                    "2".CopyTo(0, maxValue = tbTime.Text.ToArray(), change.Offset, 1);
+                                    goto CopyValue;
+
+                                case 1 when int.Parse(addedChar.ToString()) > 3 && int.Parse(char.IsDigit(conv = tbTime.Text[0]) ? conv.ToString() : "0") == 2:
+                                    "3".CopyTo(0, maxValue = tbTime.Text.ToArray(), change.Offset, 1);
+                                    goto CopyValue;
+
+                                case 3 when int.Parse(addedChar.ToString()) > 5:
+                                    "5".CopyTo(0, maxValue = tbTime.Text.ToArray(), change.Offset, 1);
+                                    goto CopyValue;
+
+                                case 6 when int.Parse(addedChar.ToString()) > 5:
+                                    "5".CopyTo(0, maxValue = tbTime.Text.ToArray(), change.Offset, 1);
+                                    goto CopyValue;
+
+                                CopyValue:
+                                    tbTime.Text = new string(maxValue);
+                                    goto default;
+
+                                default:
+                                    tbTime.CaretIndex = change.Offset + 1;
+                                    tbTime.SelectionLength = 1;
+                                    break;
+                            }
+
+                        }
+                    }
+
+                    else if (change.AddedLength == 0 && change.RemovedLength > 0)
+                    {
+                        tbTime.Text = tbTime.Text.Insert(change.Offset, template.Substring(change.Offset, change.RemovedLength));
+                        if (change.Offset != 0)
+                        {
+                            if ((tbTime.Text[change.Offset] == '0' && tbTime.Text[change.Offset] != ':') && (tbTime.Text[change.Offset - 1] != '0' && tbTime.Text[change.Offset - 1] != ':'))
+                            {
+                                char[] tempString = tbTime.Text.ToArray();
+                                tempString[change.Offset] = tbTime.Text[change.Offset - 1];
+                                tempString[change.Offset - 1] = tbTime.Text[change.Offset];
+
+                                tbTime.Text = new string(tempString);
+                            }
+
+                            tbTime.CaretIndex = change.Offset - 1;
+                            tbTime.SelectionLength = 1;
+                        }
+                    }
+                }
             }
-            // backspace/deleteä varten
-            if (tb == tbEventStartTime && tb.Text.Length < startTimeStringLocation)
-            {
-                tb.Text.Remove(tb.Text.Length - 1);
-                startTimeStringLocation = tb.Text.Length;
-                tb.SelectionStart = tb.Text.Length;
-                return;
-            }
-            else if (tb == tbEventEndTime && tb.Text.Length < endTimeStringLocation)
-            {
-                tb.Text.Remove(tb.Text.Length - 1);
-                endTimeStringLocation = tb.Text.Length;
-                tb.SelectionStart = tb.Text.Length;
-                return;
-            }
-            // syötetyn 'ei-luvun' poisto ja ':'-poikkeus
-            if (tb.Text.Length != 3 && tb.Text.Length != 6 && !char.IsDigit(tb.Text, tb.Text.Length - 1))
-                tb.Text = tb.Text.Substring(0, tb.Text.Length - 1);
-            if (tb.Text.Length == 3 || tb.Text.Length == 6 && !tb.Text.EndsWith(":"))
-                tb.Text = $"{tb.Text.Substring(0, tb.Text.Length - 1)}:";
-            // syötetty aika oikeaan muotoon
-            switch (tb.Text.Length)
-            {
-                case 1:
-                    if (int.TryParse(tb.Text, out int h) && h > 2)
-                        tb.Text = $"0{h}:";
-                    break;
-                case 2:
-                    if (int.TryParse(tb.Text, out int hh) && hh < 24)
-                        tb.Text += ":";
-                    else
-                        tb.Text = "23:";
-                    break;
-                case 4:
-                    if (int.TryParse(tb.Text.Substring(3), out int m) && m > 5)
-                        tb.Text = $"{tb.Text.Substring(0, 3)}5";
-                    break;
-                case 5:
-                    tb.Text += ":";
-                    break;
-                case 7:
-                    if (int.TryParse(tb.Text.Substring(6), out int s) && s > 5)
-                        tb.Text = $"{tb.Text.Substring(0, 6)}5";
-                    break;
-                default:
-                    break;
-            }
-            tb.SelectionStart = tb.Text.Length;
-            // tarvitaan backspace/deleteä varten.
-            if (tb == tbEventStartTime)
-                startTimeStringLocation = tb.Text.Length;
-            else if (tb == tbEventEndTime)
-                endTimeStringLocation = tb.Text.Length;
+
+            prevText = tbTime.Text;
+            tbTime.TextChanged += TbTime_TextChanged;
+            tbTime.SelectionChanged += TbTime_SelectionChanged;
         }
 
         private void TbTime_GotFocus(object sender, RoutedEventArgs e)
         {
-            TextBox tb = e.Source as TextBox;
-            if (tb.Text == "HH:mm:ss")
-                tb.Clear();
+            TextBox tbTime = e.Source as TextBox;
+            tbTime.TextChanged -= TbTime_TextChanged;
+            if (tbTime.Text == "HH:mm:ss")
+            {
+                tbTime.Text = "__:__:__";
+            }
+            tbTime.TextChanged += TbTime_TextChanged;
         }
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
@@ -273,28 +301,16 @@ namespace Raakadata
 
         private void TbTime_LostFocus(object sender, RoutedEventArgs e)
         {
-            TextBox tb = e.Source as TextBox;
-            // tyhjä kenttä täytetään placeholderilla
-            if (string.IsNullOrEmpty(tb.Text))
+            TextBox tbTime = e.Source as TextBox;
+            if (tbTime.Text[0] == '_' && tbTime.Text[1] == '_' && tbTime.Text[3] == '_' &&
+                tbTime.Text[4] == '_' && tbTime.Text[6] == '_' && tbTime.Text[7] == '_')
             {
-                tb.Text = "HH:mm:ss";
-                return;
+                tbTime.Text = "HH:mm:ss";
             }
-            // täyttää ajan perään nollia, jos mahtuu
-            string fill = "00:00:00";
-            tb.Text += fill.Substring(tb.Text.Length);
-            // jos aika on väärässä muodossa, se tyhjennetään ja
-            // pyydetään käyttäjää lattamaan uusi
-            if (!Regex.IsMatch(tb.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
+            else
             {
-                tb.Text = "HH:mm:ss";
-                if (tb == tbEventStartTime)
-                    MessageBox.Show("Please re-enter a start time again.");
-                else if (tb == tbEventEndTime)
-                    MessageBox.Show("Please re-enter an end time again.");
+                tbTime.Text = tbTime.Text.Replace('_', '0');
             }
-            if (tb == tbEventStartTime)
-                UpdateEventFilePath();
         }
 
         private async void BtnCreatePgxFile_Click(object sender, RoutedEventArgs e)
@@ -583,6 +599,49 @@ namespace Raakadata
             tbFilesInFolder.UnselectAll();
             UpdateDateTime();
             tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+        }
+
+        private void TbTime_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            TextBox tbTime = e.Source as TextBox;
+
+            tbTime.SelectionChanged -= TbTime_SelectionChanged;
+            if (tbTime.CaretIndex >= 0 && tbTime.CaretIndex < tbTime.Text.Length)
+            {
+
+                if (tbTime.SelectionLength == 0 && tbTime.CaretIndex == prevCaretIndex && tbTime.CaretIndex != 0)
+                {
+                    tbTime.CaretIndex--;
+                }
+
+                if (tbTime.CaretIndex == tbTime.Text.Length)
+                {
+                    tbTime.CaretIndex--;
+                }
+                else if (tbTime.Text[tbTime.CaretIndex] == ':')
+                {
+                    if (prevCaretIndex > tbTime.CaretIndex)
+                    {
+                        tbTime.CaretIndex--;
+                    }
+                    else
+                    {
+                        tbTime.CaretIndex++;
+                    }
+                }
+
+                tbTime.SelectionLength = 1;
+            }
+
+            if (tbTime.CaretIndex == 8)
+            {
+                tbTime.CaretIndex = 7;
+                tbTime.SelectionLength = 1;
+            }
+
+            prevCaretIndex = tbTime.CaretIndex;
+            tbTime.SelectionChanged += TbTime_SelectionChanged;
+
         }
     }
 }
