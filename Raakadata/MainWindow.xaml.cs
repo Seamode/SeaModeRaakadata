@@ -29,13 +29,24 @@ namespace Raakadata
     {
         List<DateTime> minDTs = new List<DateTime>();
         List<DateTime> maxDTs = new List<DateTime>();
-        int prevCaretIndex = -1;
-        string prevText;
+        Dictionary<TextBox, int> prevCaretIndex = new Dictionary<TextBox, int>();
+        Dictionary<TextBox, string> prevText = new Dictionary<TextBox, string>();
         private int startTimeStringLocation;
         private int endTimeStringLocation;
         public MainWindow()
         {
             InitializeComponent();
+
+            prevCaretIndex.Add(tbEventStartTime, -1);
+            prevText.Add(tbEventStartTime, tbEventStartTime.Text);
+            prevCaretIndex.Add(tbEventEndTime, -1);
+            prevText.Add(tbEventEndTime, tbEventEndTime.Text);
+
+            tbEventStartTime.TextChanged += TbTime_TextChanged;
+            tbEventStartTime.SelectionChanged += TbTime_SelectionChanged;
+            tbEventEndTime.TextChanged += TbTime_TextChanged;
+            tbEventEndTime.SelectionChanged += TbTime_SelectionChanged;
+
             tbFolderPath.Text = ConfigurationManager.AppSettings["fileDirectory"];
             tbSavePath.Text = ConfigurationManager.AppSettings["fileDirectory"];
             ListFilesInFolder();
@@ -203,7 +214,7 @@ namespace Raakadata
 
                         if (!char.IsDigit(addedChar))
                         {
-                            tbTime.Text = prevText;
+                            tbTime.Text = prevText[tbTime];
                             tbTime.CaretIndex = change.Offset;
                             tbTime.SelectionLength = 1;
                         }
@@ -268,7 +279,7 @@ namespace Raakadata
                 }
             }
 
-            prevText = tbTime.Text;
+            prevText[tbTime] = tbTime.Text;
             tbTime.TextChanged += TbTime_TextChanged;
             tbTime.SelectionChanged += TbTime_SelectionChanged;
         }
@@ -280,6 +291,7 @@ namespace Raakadata
             if (tbTime.Text == "HH:mm:ss")
             {
                 tbTime.Text = "__:__:__";
+                prevText[tbTime] = tbTime.Text;
             }
             tbTime.TextChanged += TbTime_TextChanged;
         }
@@ -609,7 +621,7 @@ namespace Raakadata
             if (tbTime.CaretIndex >= 0 && tbTime.CaretIndex < tbTime.Text.Length)
             {
 
-                if (tbTime.SelectionLength == 0 && tbTime.CaretIndex == prevCaretIndex && tbTime.CaretIndex != 0)
+                if (tbTime.SelectionLength == 0 && tbTime.CaretIndex == prevCaretIndex[tbTime] && tbTime.CaretIndex != 0)
                 {
                     tbTime.CaretIndex--;
                 }
@@ -620,7 +632,7 @@ namespace Raakadata
                 }
                 else if (tbTime.Text[tbTime.CaretIndex] == ':')
                 {
-                    if (prevCaretIndex > tbTime.CaretIndex)
+                    if (prevCaretIndex[tbTime] > tbTime.CaretIndex)
                     {
                         tbTime.CaretIndex--;
                     }
@@ -639,7 +651,7 @@ namespace Raakadata
                 tbTime.SelectionLength = 1;
             }
 
-            prevCaretIndex = tbTime.CaretIndex;
+            prevCaretIndex[tbTime] = tbTime.CaretIndex;
             tbTime.SelectionChanged += TbTime_SelectionChanged;
 
         }
