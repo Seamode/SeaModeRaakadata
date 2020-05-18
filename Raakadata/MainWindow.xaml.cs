@@ -57,7 +57,6 @@ namespace Raakadata
 
             tbFolderPath.Text = ConfigurationManager.AppSettings["fileDirectory"];
             tbSavePath.Text = ConfigurationManager.AppSettings["fileDirectory"];
-            ListFilesInFolder();
             // jotta tiedostot on helppo valita testausta varten.
             dpEventStartDate.DisplayDate = new DateTime(2019, 09, 28);
             dpEventEndDate.DisplayDate = new DateTime(2019, 09, 28);
@@ -736,8 +735,8 @@ namespace Raakadata
                 dpEventStartDate.SelectedDate = null;
                 dpEventEndDate.SelectedDate = null;
 
-                tbEventStartTime.Text = "HH:mm:ss";
-                tbEventEndTime.Text = "HH:mm:ss";
+                tbEventStartTime.Text = timePlacehoder;
+                tbEventEndTime.Text = timePlacehoder;
             }
         }
 

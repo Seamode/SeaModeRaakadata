@@ -61,7 +61,7 @@ namespace RaakadataLibrary
             DirectoryInfo di = new DirectoryInfo(path);
             foreach (var fi in di.GetFiles("*.csv"))
             {
-                files.Add(fi.Name);
+                files.Add(fi.FullName);
             }
 
             return files;
