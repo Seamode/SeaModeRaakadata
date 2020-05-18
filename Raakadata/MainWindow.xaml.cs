@@ -19,6 +19,8 @@ using System.Text.RegularExpressions;
 using System.IO;
 using System.Reflection;
 using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.ComponentModel.Design;
 
 namespace Raakadata
 {
@@ -184,7 +186,7 @@ namespace Raakadata
             ListFilesInFolder();
         }
 
-        private void TbEventFilePath_TextChanged(object sender, TextChangedEventArgs e) 
+        private void TbEventFilePath_TextChanged(object sender, TextChangedEventArgs e)
             => UpdateEventFilePath();
 
         private void UpdateEventFilePath()
@@ -200,78 +202,120 @@ namespace Raakadata
         {
             TextBox tbTime = e.Source as TextBox;
             const string template = "__:__:__";
+            int moveCaret = 1;
 
             tbTime.SelectionChanged -= TbTime_SelectionChanged;
             tbTime.TextChanged -= TbTime_TextChanged;
 
-            if (tbTime.IsFocused)
+            foreach (var change in e.Changes)
             {
-                foreach (var change in e.Changes)
+                if (change.AddedLength > 0)
                 {
-                    if (change.AddedLength > 0)
+                    tbTime.Text = tbTime.Text.Replace('H', '_');
+                    tbTime.Text = tbTime.Text.Replace('m', '_');
+                    tbTime.Text = tbTime.Text.Replace('s', '_');
+                    char[] prevString = prevText[tbTime].ToArray();
+                    char[] newString = new char[change.Offset + change.AddedLength > 8 ? (8 - change.Offset + change.AddedLength) - change.AddedLength : change.AddedLength];
+                    tbTime.Text.CopyTo(change.Offset, newString, 0, newString.Length);
+
+                    for (int i = 0; i < newString.Length; i++)
                     {
-                        char addedChar = tbTime.Text.Substring(change.Offset, change.AddedLength)[0];
+                        char addedChar = tbTime.Text[change.Offset + i];
+                        char conv;
 
-                        if (!char.IsDigit(addedChar))
+                        switch (change.Offset + i)
                         {
-                            tbTime.Text = prevText[tbTime];
-                            tbTime.CaretIndex = change.Offset;
-                            tbTime.SelectionLength = 1;
+                            case 0 when !char.IsDigit(addedChar):
+                                goto discard;
+
+                            case 0 when int.Parse(addedChar.ToString()) == 2 && int.Parse(char.IsDigit(conv = (change.Offset + i + 1 > change.Offset + change.AddedLength - 1 ? tbTime.Text[1] : newString[i + 1])) ? conv.ToString() : "0") > 3:
+                                if (change.Offset + i + 1 > change.Offset + change.AddedLength - 1)
+                                {
+                                    prevString[1] = '3';
+                                }
+                                else
+                                {
+                                    newString[i + 1] = '3';
+                                }
+                                break;
+
+                            case 0 when int.Parse(addedChar.ToString()) > 2:
+                                newString[i] = '2';
+                                break;
+
+                            case 1 when !char.IsDigit(addedChar):
+
+                                goto discard;
+
+                            case 1 when int.Parse(addedChar.ToString()) > 3 && int.Parse(char.IsDigit(conv = (change.Offset == 0 ? newString[0] : prevString[0])) ? conv.ToString() : "0") == 2:
+                                newString[i] = '3';
+                                break;
+
+                            case 2 when addedChar != ':':
+                                goto discard;
+
+                            case 3 when !char.IsDigit(addedChar):
+                                goto discard;
+
+                            case 3 when int.Parse(addedChar.ToString()) > 5:
+                                newString[i] = '5';
+                                break;
+
+                            case 4 when !char.IsDigit(addedChar):
+                                goto discard;
+
+                            case 5 when addedChar != ':':
+                                goto discard;
+
+                            case 6 when !char.IsDigit(addedChar):
+                                goto discard;
+
+                            case 6 when int.Parse(addedChar.ToString()) > 5:
+                                newString[i] = '5';
+                                break;
+
+                            case 7 when !char.IsDigit(addedChar):
+                                goto discard;
+
+                            discard:
+                                tbTime.Text = prevText[tbTime];
+                                moveCaret = 0;
+                                break;
+
+                            default:
+                                break;
                         }
-                        else
+
+                        if (moveCaret == 0)
                         {
-                            char[] maxValue = null;
-                            char conv;
-
-                            switch (change.Offset)
-                            {
-                                case 0 when int.Parse(addedChar.ToString()) == 2 && int.Parse(char.IsDigit(conv = tbTime.Text[1]) ? conv.ToString() : "0") > 3:
-                                    "3".CopyTo(0, maxValue = tbTime.Text.ToArray(), 1, 1);
-                                    goto CopyValue;
-
-                                case 0 when int.Parse(addedChar.ToString()) > 2:
-                                    "2".CopyTo(0, maxValue = tbTime.Text.ToArray(), change.Offset, 1);
-                                    goto CopyValue;
-
-                                case 1 when int.Parse(addedChar.ToString()) > 3 && int.Parse(char.IsDigit(conv = tbTime.Text[0]) ? conv.ToString() : "0") == 2:
-                                    "3".CopyTo(0, maxValue = tbTime.Text.ToArray(), change.Offset, 1);
-                                    goto CopyValue;
-
-                                case 3 when int.Parse(addedChar.ToString()) > 5:
-                                    "5".CopyTo(0, maxValue = tbTime.Text.ToArray(), change.Offset, 1);
-                                    goto CopyValue;
-
-                                case 6 when int.Parse(addedChar.ToString()) > 5:
-                                    "5".CopyTo(0, maxValue = tbTime.Text.ToArray(), change.Offset, 1);
-                                    goto CopyValue;
-
-                                CopyValue:
-                                    tbTime.Text = new string(maxValue);
-                                    goto default;
-
-                                default:
-                                    tbTime.CaretIndex = change.Offset + 1;
-                                    tbTime.SelectionLength = 1;
-                                    break;
-                            }
-
+                            tbTime.CaretIndex = change.Offset;
+                            prevCaretIndex[tbTime] = -1;
+                            break;
                         }
                     }
 
-                    else if (change.AddedLength == 0 && change.RemovedLength > 0)
+                    if (moveCaret == 1)
                     {
-                        tbTime.Text = tbTime.Text.Insert(change.Offset, template.Substring(change.Offset, change.RemovedLength));
+
+                        newString.CopyTo(prevString, change.Offset);
+                        tbTime.Text = new string(prevString);
+                        tbTime.CaretIndex = change.Offset + 1;
+                    }
+                }
+
+                else if (change.RemovedLength > change.AddedLength)
+                {
+                    if (change.Offset < 8)
+                    {
+                        tbTime.Text = tbTime.Text.Insert(change.Offset + change.AddedLength, template.Substring(change.Offset + change.AddedLength, change.RemovedLength - change.AddedLength));
+
+                        if (tbTime.Text.Length > 8)
+                        {
+                            tbTime.Text = prevText[tbTime];
+                        }
+
                         if (change.Offset != 0)
                         {
-                            if ((tbTime.Text[change.Offset] == '0' && tbTime.Text[change.Offset] != ':') && (tbTime.Text[change.Offset - 1] != '0' && tbTime.Text[change.Offset - 1] != ':'))
-                            {
-                                char[] tempString = tbTime.Text.ToArray();
-                                tempString[change.Offset] = tbTime.Text[change.Offset - 1];
-                                tempString[change.Offset - 1] = tbTime.Text[change.Offset];
-
-                                tbTime.Text = new string(tempString);
-                            }
-
                             tbTime.CaretIndex = change.Offset - 1;
                             tbTime.SelectionLength = 1;
                         }
@@ -288,10 +332,13 @@ namespace Raakadata
         {
             TextBox tbTime = e.Source as TextBox;
             tbTime.TextChanged -= TbTime_TextChanged;
-            if (tbTime.Text == "HH:mm:ss")
+            if (tbTime.Text.Contains('H') || tbTime.Text.Contains('m') || tbTime.Text.Contains('s'))
             {
-                tbTime.Text = "__:__:__";
+                tbTime.Text = tbTime.Text.Replace('H', '_');
+                tbTime.Text = tbTime.Text.Replace('m', '_');
+                tbTime.Text = tbTime.Text.Replace('s', '_');
                 prevText[tbTime] = tbTime.Text;
+
             }
             tbTime.TextChanged += TbTime_TextChanged;
         }
@@ -308,12 +355,15 @@ namespace Raakadata
             MessageBox.Show(s);
         }
 
-        private void DpEventStartDate_SelectedDateChanged(object sender, SelectionChangedEventArgs e) 
+        private void DpEventStartDate_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
             => UpdateEventFilePath();
 
         private void TbTime_LostFocus(object sender, RoutedEventArgs e)
         {
             TextBox tbTime = e.Source as TextBox;
+            tbTime.SelectionChanged -= TbTime_SelectionChanged;
+            tbTime.TextChanged -= TbTime_TextChanged;
+
             if (tbTime.Text[0] == '_' && tbTime.Text[1] == '_' && tbTime.Text[3] == '_' &&
                 tbTime.Text[4] == '_' && tbTime.Text[6] == '_' && tbTime.Text[7] == '_')
             {
@@ -323,6 +373,9 @@ namespace Raakadata
             {
                 tbTime.Text = tbTime.Text.Replace('_', '0');
             }
+
+            tbTime.SelectionChanged += TbTime_SelectionChanged;
+            tbTime.TextChanged += TbTime_TextChanged;
         }
 
         private async void BtnCreatePgxFile_Click(object sender, RoutedEventArgs e)
@@ -345,7 +398,7 @@ namespace Raakadata
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
-            
+
             /*
             if (string.IsNullOrEmpty(tbEventName.Text))
             {
@@ -354,7 +407,7 @@ namespace Raakadata
                 return;
             }
             */
-            
+
             // kisan alku ja loppu datetimen muodostus.
             // ei pitäisi päästä tähän, jos on virheellisesti syötetty.
             DateTime eventStart = (DateTime)dpEventStartDate.SelectedDate;
@@ -368,7 +421,7 @@ namespace Raakadata
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
-            
+
             // Muutetaan kursori kertomaan käyttäjälle käynnissä olevasta datan käsittelystä.
             Cursor tempCursor = Cursor;
             Cursor = Cursors.Wait;
@@ -398,7 +451,7 @@ namespace Raakadata
             }
 
             SeamodeGpxWriter wr = new SeamodeGpxWriter(sr.gpxRaceTime);
-            
+
             await Task.Run(() => wr.writeGpx(sr.gpxLines));
 
             Cursor = tempCursor;
@@ -653,7 +706,6 @@ namespace Raakadata
 
             prevCaretIndex[tbTime] = tbTime.CaretIndex;
             tbTime.SelectionChanged += TbTime_SelectionChanged;
-
         }
     }
 }
