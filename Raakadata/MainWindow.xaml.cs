@@ -19,6 +19,9 @@ using System.Text.RegularExpressions;
 using System.IO;
 using System.Reflection;
 using Microsoft.Win32;
+using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.ComponentModel.Design;
 
 namespace Raakadata
 {
@@ -27,21 +30,41 @@ namespace Raakadata
     /// </summary>
     public partial class MainWindow : Window
     {
+        List<DateTime> minDTs = new List<DateTime>();
+        List<DateTime> maxDTs = new List<DateTime>();
+        Dictionary<TextBox, int> prevCaretIndex = new Dictionary<TextBox, int>();
+        Dictionary<TextBox, string> prevText = new Dictionary<TextBox, string>();
         private int startTimeStringLocation;
         private int endTimeStringLocation;
         private readonly string timePlacehoder = "HH:mm:ss";
         public MainWindow()
         {
             InitializeComponent();
+
             string defaultPath = FindDatDirectory();
             tbFolderPath.Text = defaultPath;
             tbSavePath.Text = defaultPath;
             if (!string.IsNullOrEmpty(defaultPath))
                 ListFilesInFolder();
+
+            prevCaretIndex.Add(tbEventStartTime, -1);
+            prevText.Add(tbEventStartTime, tbEventStartTime.Text);
+            prevCaretIndex.Add(tbEventEndTime, -1);
+            prevText.Add(tbEventEndTime, tbEventEndTime.Text);
+
+            tbEventStartTime.TextChanged += TbTime_TextChanged;
+            tbEventStartTime.SelectionChanged += TbTime_SelectionChanged;
+            tbEventEndTime.TextChanged += TbTime_TextChanged;
+            tbEventEndTime.SelectionChanged += TbTime_SelectionChanged;
+
+            tbFolderPath.Text = ConfigurationManager.AppSettings["fileDirectory"];
+            tbSavePath.Text = ConfigurationManager.AppSettings["fileDirectory"];
+            ListFilesInFolder();
             // jotta tiedostot on helppo valita testausta varten.
             dpEventStartDate.DisplayDate = new DateTime(2019, 09, 28);
             dpEventEndDate.DisplayDate = new DateTime(2019, 09, 28);
         }
+
 
         private string FindDatDirectory()
         {
@@ -58,8 +81,53 @@ namespace Raakadata
             return string.Empty;
         }
 
-        private void ListFilesInFolder() =>
-            tbFilesInFolder.Text = string.Join("\r\n", SeamodeReader.FetchFilesToList(tbFolderPath.Text));
+        private void ListFilesInFolder()
+        {
+            if (tbFilesInFolder.Items.Count > 1)
+            {
+                tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+                cbSelectAll.Unchecked -= ListBox_UnselectAll;
+                cbSelectAll.IsChecked = false;
+                tbFilesInFolder.UnselectAll();
+
+                int itemCount = tbFilesInFolder.Items.Count;
+
+                for (int i = 0; i < itemCount;)
+                {
+                    if (tbFilesInFolder.Items[i] is string)
+                    {
+                        tbFilesInFolder.Items.Remove(tbFilesInFolder.Items[i]);
+                        --itemCount;
+                    }
+                    else
+                    {
+                        i++;
+                    }
+                }
+
+                minDTs.Clear();
+                maxDTs.Clear();
+
+                lbiCheckBox.IsEnabled = false;
+                cbSelectAll.IsEnabled = false;
+
+                cbSelectAll.Unchecked += ListBox_UnselectAll;
+                tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+            }
+
+            foreach (var file in SeamodeReader.FetchFilesToList(tbFolderPath.Text))
+            {
+                tbFilesInFolder.Items.Add(file);
+            }
+
+            if (tbFilesInFolder.Items.Count > 1)
+            {
+                PickDateTimes();
+
+                lbiCheckBox.IsEnabled = true;
+                cbSelectAll.IsEnabled = true;
+            }
+        }
 
         private void BtnSelectFolder_Click(object sender, RoutedEventArgs e)
         {
@@ -169,6 +237,7 @@ namespace Raakadata
             return true;
         }
 
+
         private bool ValidateParameters(out TimeSpan startTime, out TimeSpan endTime)
         {
             bool valid = true;
@@ -257,76 +326,148 @@ namespace Raakadata
 
         private void TbTime_TextChanged(object sender, TextChangedEventArgs e)
         {
-            TextBox tb = e.Source as TextBox;
-            tb.ClearValue(BorderBrushProperty);
-            if (tb.Text == timePlacehoder || string.IsNullOrEmpty(tb.Text))
+            TextBox tbTime = e.Source as TextBox;
+            tbTime.ClearValue(BorderBrushProperty);
+            const string template = "__:__:__";
+            int moveCaret = 1;
+
+            tbTime.SelectionChanged -= TbTime_SelectionChanged;
+            tbTime.TextChanged -= TbTime_TextChanged;
+
+            foreach (var change in e.Changes)
             {
-                if (tb == tbEventStartTime)
-                    startTimeStringLocation = 0;
-                else if (tb == tbEventEndTime)
-                    endTimeStringLocation = 0;
-                return;
+                if (change.AddedLength > 0)
+                {
+                    tbTime.Text = tbTime.Text.Replace('H', '_');
+                    tbTime.Text = tbTime.Text.Replace('m', '_');
+                    tbTime.Text = tbTime.Text.Replace('s', '_');
+                    char[] prevString = prevText[tbTime].ToArray();
+                    char[] newString = new char[change.Offset + change.AddedLength > 8 ? (8 - change.Offset + change.AddedLength) - change.AddedLength : change.AddedLength];
+                    tbTime.Text.CopyTo(change.Offset, newString, 0, newString.Length);
+
+                    for (int i = 0; i < newString.Length; i++)
+                    {
+                        char addedChar = tbTime.Text[change.Offset + i];
+                        char conv;
+
+                        switch (change.Offset + i)
+                        {
+                            case 0 when !char.IsDigit(addedChar):
+                                goto discard;
+
+                            case 0 when int.Parse(addedChar.ToString()) == 2 && int.Parse(char.IsDigit(conv = (change.Offset + i + 1 > change.Offset + change.AddedLength - 1 ? tbTime.Text[1] : newString[i + 1])) ? conv.ToString() : "0") > 3:
+                                if (change.Offset + i + 1 > change.Offset + change.AddedLength - 1)
+                                {
+                                    prevString[1] = '3';
+                                }
+                                else
+                                {
+                                    newString[i + 1] = '3';
+                                }
+                                break;
+
+                            case 0 when int.Parse(addedChar.ToString()) > 2:
+                                newString[i] = '2';
+                                break;
+
+                            case 1 when !char.IsDigit(addedChar):
+
+                                goto discard;
+
+                            case 1 when int.Parse(addedChar.ToString()) > 3 && int.Parse(char.IsDigit(conv = (change.Offset == 0 ? newString[0] : prevString[0])) ? conv.ToString() : "0") == 2:
+                                newString[i] = '3';
+                                break;
+
+                            case 2 when addedChar != ':':
+                                goto discard;
+
+                            case 3 when !char.IsDigit(addedChar):
+                                goto discard;
+
+                            case 3 when int.Parse(addedChar.ToString()) > 5:
+                                newString[i] = '5';
+                                break;
+
+                            case 4 when !char.IsDigit(addedChar):
+                                goto discard;
+
+                            case 5 when addedChar != ':':
+                                goto discard;
+
+                            case 6 when !char.IsDigit(addedChar):
+                                goto discard;
+
+                            case 6 when int.Parse(addedChar.ToString()) > 5:
+                                newString[i] = '5';
+                                break;
+
+                            case 7 when !char.IsDigit(addedChar):
+                                goto discard;
+
+                            discard:
+                                tbTime.Text = prevText[tbTime];
+                                moveCaret = 0;
+                                break;
+
+                            default:
+                                break;
+                        }
+
+                        if (moveCaret == 0)
+                        {
+                            tbTime.CaretIndex = change.Offset;
+                            prevCaretIndex[tbTime] = -1;
+                            break;
+                        }
+                    }
+
+                    if (moveCaret == 1)
+                    {
+
+                        newString.CopyTo(prevString, change.Offset);
+                        tbTime.Text = new string(prevString);
+                        tbTime.CaretIndex = change.Offset + 1;
+                    }
+                }
+
+                else if (change.RemovedLength > change.AddedLength)
+                {
+                    if (change.Offset < 8)
+                    {
+                        tbTime.Text = tbTime.Text.Insert(change.Offset + change.AddedLength, template.Substring(change.Offset + change.AddedLength, change.RemovedLength - change.AddedLength));
+
+                        if (tbTime.Text.Length > 8)
+                        {
+                            tbTime.Text = prevText[tbTime];
+                        }
+
+                        if (change.Offset != 0)
+                        {
+                            tbTime.CaretIndex = change.Offset - 1;
+                            tbTime.SelectionLength = 1;
+                        }
+                    }
+                }
             }
-            // backspace/deleteä varten
-            if (tb == tbEventStartTime && tb.Text.Length < startTimeStringLocation)
-            {
-                tb.Text.Remove(tb.Text.Length - 1);
-                startTimeStringLocation = tb.Text.Length;
-                tb.SelectionStart = tb.Text.Length;
-                return;
-            }
-            else if (tb == tbEventEndTime && tb.Text.Length < endTimeStringLocation)
-            {
-                tb.Text.Remove(tb.Text.Length - 1);
-                endTimeStringLocation = tb.Text.Length;
-                tb.SelectionStart = tb.Text.Length;
-                return;
-            }
-            // syötetyn 'ei-luvun' poisto ja ':'-poikkeus
-            if (tb.Text.Length != 3 && tb.Text.Length != 6 && !char.IsDigit(tb.Text, tb.Text.Length - 1))
-                tb.Text = tb.Text.Substring(0, tb.Text.Length - 1);
-            if (tb.Text.Length == 3 || tb.Text.Length == 6 && !tb.Text.EndsWith(":"))
-                tb.Text = $"{tb.Text.Substring(0, tb.Text.Length - 1)}:";
-            // syötetty aika oikeaan muotoon
-            switch (tb.Text.Length)
-            {
-                case 1:
-                    if (int.TryParse(tb.Text, out int h) && h > 2)
-                        tb.Text = $"0{h}:";
-                    break;
-                case 2:
-                    if (int.TryParse(tb.Text, out int hh) && hh < 24)
-                        tb.Text += ":";
-                    else
-                        tb.Text = "23:";
-                    break;
-                case 4:
-                    if (int.TryParse(tb.Text.Substring(3), out int m) && m > 5)
-                        tb.Text = $"{tb.Text.Substring(0, 3)}5";
-                    break;
-                case 5:
-                    tb.Text += ":";
-                    break;
-                case 7:
-                    if (int.TryParse(tb.Text.Substring(6), out int s) && s > 5)
-                        tb.Text = $"{tb.Text.Substring(0, 6)}5";
-                    break;
-                default:
-                    break;
-            }
-            tb.SelectionStart = tb.Text.Length;
-            // tarvitaan backspace/deleteä varten.
-            if (tb == tbEventStartTime)
-                startTimeStringLocation = tb.Text.Length;
-            else if (tb == tbEventEndTime)
-                endTimeStringLocation = tb.Text.Length;
+
+            prevText[tbTime] = tbTime.Text;
+            tbTime.TextChanged += TbTime_TextChanged;
+            tbTime.SelectionChanged += TbTime_SelectionChanged;
         }
 
         private void TbTime_GotFocus(object sender, RoutedEventArgs e)
         {
-            TextBox tb = e.Source as TextBox;
-            if (tb.Text == timePlacehoder)
-                tb.Clear();
+            TextBox tbTime = e.Source as TextBox;
+            tbTime.TextChanged -= TbTime_TextChanged;
+            if (tbTime.Text.Contains('H') || tbTime.Text.Contains('m') || tbTime.Text.Contains('s'))
+            {
+                tbTime.Text = tbTime.Text.Replace('H', '_');
+                tbTime.Text = tbTime.Text.Replace('m', '_');
+                tbTime.Text = tbTime.Text.Replace('s', '_');
+                prevText[tbTime] = tbTime.Text;
+
+            }
+            tbTime.TextChanged += TbTime_TextChanged;
         }
 
         private void DpEventDate_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
@@ -343,12 +484,21 @@ namespace Raakadata
 
         private void TbTime_LostFocus(object sender, RoutedEventArgs e)
         {
-            TextBox tb = e.Source as TextBox;
-            // tyhjä kenttä täytetään placeholderilla
-            if (string.IsNullOrEmpty(tb.Text))
+            TextBox tbTime = e.Source as TextBox;
+            tbTime.SelectionChanged -= TbTime_SelectionChanged;
+            tbTime.TextChanged -= TbTime_TextChanged;
+
+            if (tbTime.Text[0] == '_' && tbTime.Text[1] == '_' && tbTime.Text[3] == '_' &&
+                tbTime.Text[4] == '_' && tbTime.Text[6] == '_' && tbTime.Text[7] == '_')
             {
                 tb.Text = timePlacehoder;
-                return;
+            }
+            else
+            {
+                tbTime.Text = tbTime.Text.Replace('_', '0');
+            }
+            tbTime.SelectionChanged += TbTime_SelectionChanged;
+            tbTime.TextChanged += TbTime_TextChanged;
             }
             // täyttää ajan perään nollia, jos mahtuu
             string fill = "00:00:00";
@@ -371,6 +521,7 @@ namespace Raakadata
                 else if (tb == tbEventEndTime)
                     lblEventEndTimeError.ClearValue(ContentProperty);
             }
+
         }
 
         private async void BtnCreateGpxFile_Click(object sender, RoutedEventArgs e)
@@ -392,7 +543,7 @@ namespace Raakadata
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
-            
+
             // Muutetaan kursori kertomaan käyttäjälle käynnissä olevasta datan käsittelystä.
             Cursor tempCursor = Cursor;
             Cursor = Cursors.Wait;
@@ -401,9 +552,12 @@ namespace Raakadata
             // tiedostojen luku
             SeamodeReader sr = new SeamodeReader(eventStart, eventEnd);
 
-            foreach (string tiedosto in sr.FetchFilesToRead(tbFolderPath.Text))
+            foreach (var item in tbFilesInFolder.SelectedItems)
             {
-                await Task.Run(() => sr.haeGpxData(tiedosto));
+                if (item is string)
+                {
+                    await Task.Run(() => sr.haeGpxData((string)item));
+                }
             }
 
             // muuten tulee tyhjä tiedosto
@@ -445,13 +599,239 @@ namespace Raakadata
             ListFilesInFolder();
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        void PickDateTimes()
         {
-            OpenFileDialog openFile = new OpenFileDialog() { Filter = "CSV Files (*.csv)|*.csv" };
-            if (openFile.ShowDialog() == true)
+            for (int i = 1; i < tbFilesInFolder.Items.Count; i++)
             {
-                MessageBox.Show($"sr.HaeGpxData({openFile.FileName});\ngwr.WriteGpx(sr.GpxLines);");
+                using (FileStream fileStream = new FileStream((string)tbFilesInFolder.Items[i], FileMode.Open, FileAccess.Read))
+                {
+                    fileStream.Seek(0, SeekOrigin.Begin);
+                    bool isDigit = false;
+                    bool isNewLine = false;
+                    char delim = ';';
+
+                    while (!isDigit)
+                    {
+                        char c = Convert.ToChar(fileStream.ReadByte());
+
+                        if (isNewLine && char.IsDigit(c))
+                        {
+                            List<char> stringBuilder = new List<char>();
+                            isDigit = true;
+                            isNewLine = false;
+
+                            stringBuilder.Add(c);
+
+                            while ((c = Convert.ToChar(fileStream.ReadByte())) != delim)
+                            {
+                                stringBuilder.Add(c);
+                            }
+
+                            string tempDateTimeStart = new string(stringBuilder.ToArray());
+                            stringBuilder.Clear();
+
+                            DateTime startDateTime = DateTime.Parse(tempDateTimeStart, CultureInfo.CreateSpecificCulture("fi-FI"));
+
+                            while ((c = Convert.ToChar(fileStream.ReadByte())) != delim)
+                            {
+                                stringBuilder.Add(c);
+                            }
+
+                            tempDateTimeStart = new string(stringBuilder.ToArray());
+
+                            startDateTime = startDateTime.Add(TimeSpan.Parse(tempDateTimeStart, CultureInfo.CreateSpecificCulture("fi-FI")));
+                            minDTs.Add(startDateTime);
+                        }
+                        else if (isNewLine && char.IsLetter(c))
+                        {
+                            isNewLine = false;
+
+                            delim = Convert.ToChar(fileStream.ReadByte());
+                            while (char.IsLetterOrDigit(delim) || delim == '_')
+                            {
+                                delim = Convert.ToChar(fileStream.ReadByte());
+                            }
+
+                            while (c != '\n')
+                            {
+                                c = Convert.ToChar(fileStream.ReadByte());
+                            }
+
+                            isNewLine = true;
+                        }
+                        else if (c == '\n')
+                        {
+                            isNewLine = true;
+                        }
+                    }
+
+                    Stack<char> stringBuilderStack = new Stack<char>();
+                    long offset = 2;
+                    isNewLine = false;
+
+                    while (!isNewLine)
+                    {
+                        fileStream.Seek(-offset, SeekOrigin.End);
+                        char c = Convert.ToChar(fileStream.ReadByte());
+
+                        if (c == '\n')
+                        {
+                            isNewLine = true;
+                        }
+                        else
+                        {
+                            stringBuilderStack.Push(c);
+                            offset++;
+                        }
+                    }
+
+                    string lastFileLine = new string(stringBuilderStack.ToArray());
+                    DateTime endDateTime = DateTime.Parse(lastFileLine.Substring(0, lastFileLine.IndexOf(delim)), CultureInfo.CreateSpecificCulture("fi-FI"));
+                    endDateTime = endDateTime.Add(TimeSpan.Parse(lastFileLine.Substring(lastFileLine.IndexOf(delim) + 1, lastFileLine.IndexOf(delim, lastFileLine.IndexOf(delim) + 1) - (lastFileLine.IndexOf(delim) + 1)), CultureInfo.CreateSpecificCulture("fi-FI")));
+
+                    if (endDateTime.Millisecond > 0)
+                    {
+                        endDateTime = endDateTime.AddSeconds(1);
+                    }
+
+                    maxDTs.Add(endDateTime);
+                }
             }
+        }
+
+        private void UpdateDateTime()
+        {
+            if (tbFilesInFolder.SelectedItems.Count > 0)
+            {
+                DateTime minDate = DateTime.MaxValue;
+                DateTime maxDate = DateTime.MinValue;
+                List<int> selectedInds = new List<int>();
+
+                foreach (var selectedFile in tbFilesInFolder.SelectedItems)
+                {
+                    if (selectedFile is string)
+                    {
+                        selectedInds.Add(tbFilesInFolder.Items.IndexOf(selectedFile) - 1);
+                    }
+                }
+
+                foreach (var index in selectedInds)
+                {
+                    if (minDTs[index] < minDate)
+                    {
+                        minDate = minDTs[index];
+                    }
+
+                    if (maxDTs[index] > maxDate)
+                    {
+                        maxDate = maxDTs[index];
+                    }
+                }
+
+                dpEventStartDate.SelectedDate = minDate.Date;
+                dpEventEndDate.SelectedDate = maxDate.Date;
+
+                tbEventStartTime.Text = $"{minDate.Hour}:{minDate.Minute}:{minDate.Second}";
+                tbEventEndTime.Text = $"{maxDate.Hour}:{maxDate.Minute}:{maxDate.Second}";
+            }
+            else
+            {
+                dpEventStartDate.SelectedDate = null;
+                dpEventEndDate.SelectedDate = null;
+
+                tbEventStartTime.Text = "HH:mm:ss";
+                tbEventEndTime.Text = "HH:mm:ss";
+            }
+        }
+
+        private void tbFilesInFolder_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (e.RemovedItems.Contains(lbiCheckBox))
+            {
+                cbSelectAll.IsChecked = false;
+            }
+            else if (e.AddedItems.Contains(lbiCheckBox))
+            {
+                cbSelectAll.IsChecked = true;
+            }
+            else if (lbiCheckBox.IsSelected && tbFilesInFolder.SelectedItems.Count == tbFilesInFolder.Items.Count - 1)
+            {
+                cbSelectAll.Unchecked -= ListBox_UnselectAll;
+                cbSelectAll.IsChecked = false;
+                cbSelectAll.Unchecked += ListBox_UnselectAll;
+
+                tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+                lbiCheckBox.IsSelected = false;
+                tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+                UpdateDateTime();
+            }
+            else if (!lbiCheckBox.IsSelected && tbFilesInFolder.SelectedItems.Count == tbFilesInFolder.Items.Count - 1)
+            {
+                cbSelectAll.IsChecked = true;
+            }
+            else
+            {
+                UpdateDateTime();
+            }
+
+        }
+
+        private void ListBox_SelectAll(object sender, RoutedEventArgs e)
+        {
+            tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+            tbFilesInFolder.SelectAll();
+            UpdateDateTime();
+            tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+        }
+
+        private void ListBox_UnselectAll(object sender, RoutedEventArgs e)
+        {
+            tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+            tbFilesInFolder.UnselectAll();
+            UpdateDateTime();
+            tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+        }
+
+        private void TbTime_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            TextBox tbTime = e.Source as TextBox;
+
+            tbTime.SelectionChanged -= TbTime_SelectionChanged;
+            if (tbTime.CaretIndex >= 0 && tbTime.CaretIndex < tbTime.Text.Length)
+            {
+
+                if (tbTime.SelectionLength == 0 && tbTime.CaretIndex == prevCaretIndex[tbTime] && tbTime.CaretIndex != 0)
+                {
+                    tbTime.CaretIndex--;
+                }
+
+                if (tbTime.CaretIndex == tbTime.Text.Length)
+                {
+                    tbTime.CaretIndex--;
+                }
+                else if (tbTime.Text[tbTime.CaretIndex] == ':')
+                {
+                    if (prevCaretIndex[tbTime] > tbTime.CaretIndex)
+                    {
+                        tbTime.CaretIndex--;
+                    }
+                    else
+                    {
+                        tbTime.CaretIndex++;
+                    }
+                }
+
+                tbTime.SelectionLength = 1;
+            }
+
+            if (tbTime.CaretIndex == 8)
+            {
+                tbTime.CaretIndex = 7;
+                tbTime.SelectionLength = 1;
+            }
+
+            prevCaretIndex[tbTime] = tbTime.CaretIndex;
+            tbTime.SelectionChanged += TbTime_SelectionChanged;
         }
     }
 }

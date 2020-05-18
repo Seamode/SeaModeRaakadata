@@ -77,13 +77,18 @@
                 </LinearGradientBrush>
             </Button.Background>
         </Button>
-        <TextBox x:Name="tbFilesInFolder" Grid.Column="2" Grid.Row="10" Grid.ColumnSpan="9" Text="" Grid.RowSpan="7" IsReadOnly="True" BorderBrush="#FF303030" />
+        <ListBox x:Name="tbFilesInFolder" SelectionMode="Multiple" Grid.Column="2" Grid.Row="12" Grid.ColumnSpan="9" Grid.RowSpan="5" BorderBrush="#FF303030" SelectionChanged="tbFilesInFolder_SelectionChanged">
+            <ListBoxItem x:Name="lbiCheckBox" IsEnabled="false">
+                <CheckBox x:Name="cbSelectAll" IsEnabled="false" Checked="ListBox_SelectAll" Unchecked="ListBox_UnselectAll">Select All</CheckBox>
+            </ListBoxItem>
+        </ListBox>
         <Label Grid.Column="2" Grid.Row="7" Content="Parce From:" VerticalContentAlignment="Center" Grid.ColumnSpan="9"  Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="14" Grid.Row="7" Content="Parce To:"  Grid.ColumnSpan="7" VerticalContentAlignment="Center" Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="14" Grid.Row="11" Content="End date:"  Grid.ColumnSpan="2" VerticalContentAlignment="Center" Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="14" Grid.Row="10" Content="Start date:"  Grid.ColumnSpan="2" VerticalContentAlignment="Center" Foreground="White" FontSize="12" Background="#FF303030"/>
         <Label Grid.Column="14" Grid.Row="16" Content="Output file:"  Grid.ColumnSpan="2" VerticalContentAlignment="Center" Foreground="White" FontSize="12" Background="#FF303030"/>
         <Button x:Name="BtnCreateEventFile" Grid.Column="14" Grid.Row="18" Content="Parce raw data"  Grid.ColumnSpan="3" BorderBrush="#FF481616" Foreground="White" FontSize="12" Click="BtnCreateEventFile_Click" Style="{StaticResource ButtonStyleGreen}">
+        
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                     <GradientStop Color="#FF939793" Offset="0"/>
