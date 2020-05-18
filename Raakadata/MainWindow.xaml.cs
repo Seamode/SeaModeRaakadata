@@ -496,31 +496,14 @@ namespace Raakadata
             }
             tbTime.SelectionChanged += TbTime_SelectionChanged;
             tbTime.TextChanged += TbTime_TextChanged;
-        }
-            // täyttää ajan perään nollia, jos mahtuu
-            //string fill = "00:00:00";
-            //tbTime.Text += fill.Substring(tb.Text.Length);
-            //// jos aika on väärässä muodossa, se tyhjennetään ja
-            //// pyydetään käyttäjää lattamaan uusi
-            //if (!Regex.IsMatch(tb.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
-            //{
-            //    tb.Text = timePlacehoder;
-            //    tb.BorderBrush = Brushes.Red;
-            //    if (tb == tbEventStartTime)
-            //        lblEventStartTimeError.Content = "Please re-enter a valid time.";
-            //    else if (tb == tbEventEndTime)
-            //        lblEventEndTimeError.Content = "Please re-enter a valid time.";
-            //}
-            //else
-            //{
-            //    if (tb == tbEventStartTime)
-            //        lblEventStartTimeError.ClearValue(ContentProperty);
-            //    else if (tb == tbEventEndTime)
-            //        lblEventEndTimeError.ClearValue(ContentProperty);
-            //}
-        //}
 
-        private async void BtnCreateGpxFile_Click(object sender, RoutedEventArgs e)
+            if (tbTime == tbEventStartTime && Regex.IsMatch(tbTime.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
+                lblEventStartTimeError.ClearValue(ContentProperty);
+            else if (tbTime == tbEventEndTime && Regex.IsMatch(tbTime.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
+                lblEventEndTimeError.ClearValue(ContentProperty);
+        }
+
+    private async void BtnCreateGpxFile_Click(object sender, RoutedEventArgs e)
         {
             // jotta ei tapahdu tupla klikkausta.
             BtnCreateGpxFile.IsEnabled = false;
@@ -599,7 +582,7 @@ namespace Raakadata
         {
             for (int i = 1; i < tbFilesInFolder.Items.Count; i++)
             {
-                using (FileStream fileStream = new FileStream((string)tbFilesInFolder.Items[i], FileMode.Open, FileAccess.Read))
+                using (FileStream fileStream = new FileStream($"{tbFolderPath.Text}\\{(string)tbFilesInFolder.Items[i]}", FileMode.Open, FileAccess.Read))
                 {
                     fileStream.Seek(0, SeekOrigin.Begin);
                     bool isDigit = false;
@@ -729,6 +712,9 @@ namespace Raakadata
 
                 tbEventStartTime.Text = $"{minDate.Hour}:{minDate.Minute}:{minDate.Second}";
                 tbEventEndTime.Text = $"{maxDate.Hour}:{maxDate.Minute}:{maxDate.Second}";
+
+                lblEventStartTimeError.ClearValue(ContentProperty);
+                lblEventEndTimeError.ClearValue(ContentProperty);
             }
             else
             {
