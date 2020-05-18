@@ -26,7 +26,7 @@ namespace RaakadataLibrary
         private bool headersWritten = false;
         private readonly DateTime startTime;
         private readonly DateTime endTime;
-        private bool pastEnd = false;
+        public bool PastEnd { get; private set; } = false;
         private const string startPattern_c = "^SeaMODE_";
         private readonly string startPattern;
         private readonly string endPattern;
@@ -59,12 +59,9 @@ namespace RaakadataLibrary
         {
             List<string> files = new List<string>();
             DirectoryInfo di = new DirectoryInfo(path);
-            string example = "SeaMODE_20190928_112953.csv";
-            int len = example.Length;
-            foreach (var fi in di.GetFiles())
+            foreach (var fi in di.GetFiles("*.csv"))
             {
-                if (Regex.IsMatch(fi.Name, "^SeaMODE_") && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == len)
-                    files.Add(fi.FullName);
+                files.Add(fi.Name);
             }
 
             return files;
@@ -79,7 +76,7 @@ namespace RaakadataLibrary
             int len = example.Length;
             foreach (var fi in di.GetFiles())
             {
-                if (pastEnd)
+                if (PastEnd)
                     break;
                 if ((Regex.IsMatch(fi.Name, startPattern) || Regex.IsMatch(fi.Name, endPattern)) && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == len)
                     files.Add(fi.FullName);
@@ -100,7 +97,7 @@ namespace RaakadataLibrary
             using (StreamReader sr = File.OpenText(filePath))
             {
                 string row = "";
-                while ((row = sr.ReadLine()) != null && validFile && !pastEnd)
+                while ((row = sr.ReadLine()) != null && validFile && !PastEnd)
                 {
                     if (headersFound)
                     {
@@ -245,7 +242,7 @@ namespace RaakadataLibrary
             DateTime eventTime = DateTime.ParseExact(values[0] + " " + values[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
             if (eventTime > endTime)
             {
-                pastEnd = true;
+                PastEnd = true;
                 return false;
             }
             else if (eventTime >= startTime && eventTime <= endTime)

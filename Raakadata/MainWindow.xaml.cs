@@ -18,6 +18,7 @@ using Ookii.Dialogs.Wpf;
 using System.Text.RegularExpressions;
 using System.IO;
 using System.Reflection;
+using Microsoft.Win32;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.ComponentModel.Design;
@@ -35,9 +36,16 @@ namespace Raakadata
         Dictionary<TextBox, string> prevText = new Dictionary<TextBox, string>();
         private int startTimeStringLocation;
         private int endTimeStringLocation;
+        private readonly string timePlacehoder = "HH:mm:ss";
         public MainWindow()
         {
             InitializeComponent();
+
+            string defaultPath = FindDatDirectory();
+            tbFolderPath.Text = defaultPath;
+            tbSavePath.Text = defaultPath;
+            if (!string.IsNullOrEmpty(defaultPath))
+                ListFilesInFolder();
 
             prevCaretIndex.Add(tbEventStartTime, -1);
             prevText.Add(tbEventStartTime, tbEventStartTime.Text);
@@ -55,6 +63,22 @@ namespace Raakadata
             // jotta tiedostot on helppo valita testausta varten.
             dpEventStartDate.DisplayDate = new DateTime(2019, 09, 28);
             dpEventEndDate.DisplayDate = new DateTime(2019, 09, 28);
+        }
+
+
+        private string FindDatDirectory()
+        {
+            if (Directory.Exists(ConfigurationManager.AppSettings["fileDirectory"]))
+                return ConfigurationManager.AppSettings["fileDirectory"];
+            //string altPath = Directory.GetParent(Assembly.GetExecutingAssembly().Location).ToString();
+            //string altPath = System.IO.Path.GetDirectoryName(Environment.GetCommandLineArgs()[0]);
+            string altPath = System.IO.Path.GetDirectoryName(
+                System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
+            // ylempi pitäisi palauttaa prg, alla se vaihdetaan dat
+            altPath = $"{altPath.Substring(0, altPath.LastIndexOf(System.IO.Path.DirectorySeparatorChar) + 1)}dat";
+            if (Directory.Exists(altPath))
+                return altPath;
+            return string.Empty;
         }
 
         private void ListFilesInFolder()
@@ -127,80 +151,183 @@ namespace Raakadata
         private async void BtnCreateEventFile_Click(object sender, RoutedEventArgs e)
         {
             // jotta ei tapahdu tupla klikkausta.
+            BtnCreateGpxFile.IsEnabled = false;
             BtnCreateEventFile.IsEnabled = false;
-            if (dpEventStartDate.SelectedDate == null || dpEventEndDate.SelectedDate == null)
+            if (!ValidateParameters(out TimeSpan startTime, out TimeSpan endTime))
             {
-                MessageBox.Show("Please select start and end dates for the race.");
-                BtnCreateEventFile.IsEnabled = true;
-                return;
-            }
-            if (!TimeSpan.TryParse(tbEventStartTime.Text, out TimeSpan startTime) ||
-                !TimeSpan.TryParse(tbEventEndTime.Text, out TimeSpan endTime))
-            {
-                MessageBox.Show("Please enter start and end times for the race.");
-                BtnCreateEventFile.IsEnabled = true;
-                return;
-            }
-            if (string.IsNullOrEmpty(tbEventName.Text))
-            {
-                MessageBox.Show("Please enter a name for the race.");
+                BtnCreateGpxFile.IsEnabled = true;
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
             // kisan alku ja loppu datetimen muodostus.
             // ei pitäisi päästä tähän, jos on virheellisesti syötetty.
-            DateTime eventStart = (DateTime)dpEventStartDate.SelectedDate;
-            eventStart = eventStart.Add(startTime);
-            DateTime eventEnd = (DateTime)dpEventEndDate.SelectedDate;
-            eventEnd = eventEnd.Add(endTime);
-            if (eventEnd <= eventStart)
+            if (!ValidTimePeriod(startTime, endTime, out DateTime eventStart, out DateTime eventEnd))
             {
-                MessageBox.Show("Check the dates and times.\nRace start must be before the ending.");
+                BtnCreateGpxFile.IsEnabled = true;
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
+            // Tarkistaa onko samannimistä tiedostoa kansiossa, jos on kysyy halutaanko sen päälle kirjoittaa.
+            string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventEndDate.SelectedDate:yyyyMMdd}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.csv";
+            if (File.Exists(fullFilePath))
+            {
+                var anws = MessageBox.Show("A file with that name already exists.\nIf you perceed, the file will be overwritten.\nDo you want to proceed?", "Warning, File Exists.", MessageBoxButton.YesNo);
+                if (anws == MessageBoxResult.No)
+                {
+                    BtnCreateGpxFile.IsEnabled = true;
+                    BtnCreateEventFile.IsEnabled = true;
+                    tbEventName.Focus();
+                    return;
+                }
+                else
+                    File.Delete(fullFilePath);
+            }
+            // Muutetaan kursori kertomaan käyttäjälle käynnissä olevasta datan käsittelystä.
+            Cursor tempCursor = Cursor;
+            Cursor = Cursors.Wait;
+            ForceCursor = true;
             // tiedostojen luku
             SeamodeReader sr = new SeamodeReader(eventStart, eventEnd);
             await sr.ReadAndWriteFilesAsync(tbFolderPath.Text);
+            // Kursorin palautus.
+            Cursor = tempCursor;
+            ForceCursor = false;
             // muuten tulee tyhjä tiedosto
             if (sr.DataRowCount == 0)
             {
                 MessageBox.Show("No data found for specified time period.");
+                BtnCreateGpxFile.IsEnabled = true;
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
             // kisatiedoston luonti
-            File.Move(sr.TmpFile, tbEventFilePath.Text);
-            MessageBox.Show($"File {tbEventFilePath.Text} was created.");
-            if (sr.DataRowErrors.Count > 0)
+            File.Move(sr.TmpFile, fullFilePath);
+            // Ilmoitus luonnista ja mahdolliset virheet.
+            StringBuilder msg = new StringBuilder();
+            msg.AppendLine($"File {fullFilePath} was created.");
+            if (!sr.PastEnd)
+                msg.AppendLine("Data logging ended before the specified endpoint.");
+            foreach (string line in sr.DataRowErrors)
             {
-                MessageBox.Show($"{string.Join("\n", sr.DataRowErrors)}");
+                msg.AppendLine(line);
             }
+            msg.AppendLine("Would you like to open the folder?");
+            var res = MessageBox.Show(msg.ToString(), "File Created.", MessageBoxButton.YesNo);
+            // avaa File Explorerin
+            if (res == MessageBoxResult.Yes)
+                System.Diagnostics.Process.Start(tbSavePath.Text);
+            BtnCreateGpxFile.IsEnabled = true;
             BtnCreateEventFile.IsEnabled = true;
             // syötetyt arvot tyhjennetään
-            dpEventStartDate.ClearValue(DatePicker.SelectedDateProperty);
-            dpEventEndDate.ClearValue(DatePicker.SelectedDateProperty);
-            tbEventStartTime.Text = "HH:mm:ss";
-            tbEventEndTime.Text = "HH:mm:ss";
-            tbEventName.Clear();
+            ResetUI();
             ListFilesInFolder();
         }
 
-        private void TbEventFilePath_TextChanged(object sender, TextChangedEventArgs e)
-            => UpdateEventFilePath();
-
-        private void UpdateEventFilePath()
+        private bool ValidTimePeriod(TimeSpan startTime, TimeSpan endTime, out DateTime eventStart, out DateTime eventEnd)
         {
-            string polku = tbSavePath == null ? "<Path>" : tbSavePath.Text;
-            string pvm = dpEventStartDate.SelectedDate == null ? "<Date>" : $"{dpEventStartDate.SelectedDate:yyyyMMdd}";
-            string aika = tbEventStartTime.Text == "HH:mm:ss" ? "<Time>" : string.Join("", tbEventStartTime.Text.Split(':', '.'));
-            string nimi = string.IsNullOrEmpty(tbEventName.Text) ? "<RaceName>" : tbEventName.Text;
-            tbEventFilePath.Text = $"{polku}\\SeaMODE_{pvm}_{aika}_{nimi}.csv";
+            eventStart = (DateTime)dpEventStartDate.SelectedDate;
+            eventStart = eventStart.Add(startTime);
+            eventEnd = (DateTime)dpEventEndDate.SelectedDate;
+            eventEnd = eventEnd.Add(endTime);
+            if (eventEnd <= eventStart)
+            {
+                lblEventLengthError.Content = "Event start must be before the ending.";
+                return false;
+            }
+            return true;
+        }
+
+
+        private bool ValidateParameters(out TimeSpan startTime, out TimeSpan endTime)
+        {
+            bool valid = true;
+            if (dpEventStartDate.SelectedDate == null)
+            {
+                dpEventStartDate.BorderBrush = Brushes.Red;
+                lblEventStartDateError.Content = "Date required";
+                valid = false;
+            }
+            if (dpEventEndDate.SelectedDate == null)
+            {
+                dpEventEndDate.BorderBrush = Brushes.Red;
+                lblEventEndDateError.Content = "Date required";
+                valid = false;
+            }
+            if (!TimeSpan.TryParse(tbEventStartTime.Text, out startTime))
+            {
+                tbEventStartTime.BorderBrush = Brushes.Red;
+                lblEventStartTimeError.Content = "Time required";
+                valid = false;
+            }
+            if (!TimeSpan.TryParse(tbEventEndTime.Text, out endTime))
+            {
+                tbEventEndTime.BorderBrush = Brushes.Red;
+                lblEventEndTimeError.Content = "Time required";
+                valid = false;
+            }
+            if (string.IsNullOrEmpty(tbEventName.Text))
+            {
+                tbEventName.BorderBrush = Brushes.Red;
+                lblEventNameError.Content = "Name for file required";
+                valid = false;
+            }
+            if (string.IsNullOrEmpty(tbFolderPath.Text) || !Directory.Exists(tbFolderPath.Text))
+            {
+                tbFolderPath.BorderBrush = Brushes.Red;
+                lblFolderPathError.Content = "Valid folder path required";
+                valid = false;
+            }
+            if (string.IsNullOrEmpty(tbSavePath.Text) || !Directory.Exists(tbSavePath.Text))
+            {
+                tbSavePath.BorderBrush = Brushes.Red;
+                lblSavePathError.Content = "Valid folder path required";
+                valid = false;
+            }
+            return valid;
+        }
+
+        private void ResetUI()
+        {
+            dpEventStartDate.SelectedDate = null;
+            //dpEventStartDate.DisplayDate = DateTime.Today;
+            dpEventEndDate.SelectedDate = null;
+            //dpEventEndDate.DisplayDate = DateTime.Today;
+            tbEventStartTime.Text = timePlacehoder;
+            tbEventEndTime.Text = timePlacehoder;
+            tbEventName.Clear();
+            dpEventStartDate.ClearValue(BorderBrushProperty);
+            dpEventEndDate.ClearValue(BorderBrushProperty);
+            tbFolderPath.ClearValue(BorderBrushProperty);
+            tbSavePath.ClearValue(BorderBrushProperty);
+            tbEventStartTime.ClearValue(BorderBrushProperty);
+            tbEventEndTime.ClearValue(BorderBrushProperty);
+            tbEventName.ClearValue(BorderBrushProperty);
+            lblFolderPathError.ClearValue(ContentProperty);
+            lblSavePathError.ClearValue(ContentProperty);
+            lblEventStartDateError.ClearValue(ContentProperty);
+            lblEventStartTimeError.ClearValue(ContentProperty);
+            lblEventEndDateError.ClearValue(ContentProperty);
+            lblEventEndTimeError.ClearValue(ContentProperty);
+            lblEventLengthError.ClearValue(ContentProperty);
+            lblEventNameError.ClearValue(ContentProperty);
+        }
+
+        private void TbFile_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            TextBox tb = e.Source as TextBox;
+            tb.ClearValue(BorderBrushProperty);
+            if (tb == tbFolderPath)
+                lblFolderPathError.ClearValue(ContentProperty);
+            else if (tb == tbSavePath)
+                lblSavePathError.ClearValue(ContentProperty);
+            else if (tb == tbEventName)
+                lblEventNameError.ClearValue(ContentProperty);
         }
 
         private void TbTime_TextChanged(object sender, TextChangedEventArgs e)
         {
             TextBox tbTime = e.Source as TextBox;
+            tbTime.ClearValue(BorderBrushProperty);
             const string template = "__:__:__";
             int moveCaret = 1;
 
@@ -343,20 +470,17 @@ namespace Raakadata
             tbTime.TextChanged += TbTime_TextChanged;
         }
 
-        private void Button_Click_1(object sender, RoutedEventArgs e)
+        private void DpEventDate_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
         {
-            string s = System.IO.Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
-            //string s = Directory.GetParent(Assembly.GetExecutingAssembly().Location).ToString();
-            //string s = System.IO.Path.GetDirectoryName(Environment.GetCommandLineArgs()[0]);
-            if (s.EndsWith("prg"))
-            {
-                s = s.Replace("prg", "dat");
-            }
-            MessageBox.Show(s);
+            DatePicker dp = e.Source as DatePicker;
+            dp.ClearValue(BorderBrushProperty);
+            if (dp == dpEventStartDate)
+                lblEventStartDateError.ClearValue(ContentProperty);
+            else if (dp == dpEventEndDate)
+                lblEventEndDateError.ClearValue(ContentProperty);
+            if (dp.SelectedDate != null && dp == dpEventStartDate)
+                dpEventEndDate.DisplayDate = (DateTime)dp.SelectedDate; 
         }
-
-        private void DpEventStartDate_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
-            => UpdateEventFilePath();
 
         private void TbTime_LostFocus(object sender, RoutedEventArgs e)
         {
@@ -367,57 +491,55 @@ namespace Raakadata
             if (tbTime.Text[0] == '_' && tbTime.Text[1] == '_' && tbTime.Text[3] == '_' &&
                 tbTime.Text[4] == '_' && tbTime.Text[6] == '_' && tbTime.Text[7] == '_')
             {
-                tbTime.Text = "HH:mm:ss";
+                tb.Text = timePlacehoder;
             }
             else
             {
                 tbTime.Text = tbTime.Text.Replace('_', '0');
             }
-
             tbTime.SelectionChanged += TbTime_SelectionChanged;
             tbTime.TextChanged += TbTime_TextChanged;
+            }
+            // täyttää ajan perään nollia, jos mahtuu
+            string fill = "00:00:00";
+            tb.Text += fill.Substring(tb.Text.Length);
+            // jos aika on väärässä muodossa, se tyhjennetään ja
+            // pyydetään käyttäjää lattamaan uusi
+            if (!Regex.IsMatch(tb.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
+            {
+                tb.Text = timePlacehoder;
+                tb.BorderBrush = Brushes.Red;
+                if (tb == tbEventStartTime)
+                    lblEventStartTimeError.Content = "Please re-enter a valid time.";
+                else if (tb == tbEventEndTime)
+                    lblEventEndTimeError.Content = "Please re-enter a valid time.";
+            }
+            else
+            {
+                if (tb == tbEventStartTime)
+                    lblEventStartTimeError.ClearValue(ContentProperty);
+                else if (tb == tbEventEndTime)
+                    lblEventEndTimeError.ClearValue(ContentProperty);
+            }
+
         }
 
-        private async void BtnCreatePgxFile_Click(object sender, RoutedEventArgs e)
+        private async void BtnCreateGpxFile_Click(object sender, RoutedEventArgs e)
         {
             // jotta ei tapahdu tupla klikkausta.
-            BtnCreatePgxFile.IsEnabled = false;
+            BtnCreateGpxFile.IsEnabled = false;
             BtnCreateEventFile.IsEnabled = false;
-            if (dpEventStartDate.SelectedDate == null || dpEventEndDate.SelectedDate == null)
+            if (!ValidateParameters(out TimeSpan startTime, out TimeSpan endTime))
             {
-                MessageBox.Show("Please select start and end dates for the race.");
-                BtnCreatePgxFile.IsEnabled = true;
+                BtnCreateGpxFile.IsEnabled = true;
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
-            if (!TimeSpan.TryParse(tbEventStartTime.Text, out TimeSpan startTime) ||
-                !TimeSpan.TryParse(tbEventEndTime.Text, out TimeSpan endTime))
-            {
-                MessageBox.Show("Please enter start and end times for the race.");
-                BtnCreatePgxFile.IsEnabled = true;
-                BtnCreateEventFile.IsEnabled = true;
-                return;
-            }
-
-            /*
-            if (string.IsNullOrEmpty(tbEventName.Text))
-            {
-                MessageBox.Show("Please enter a name for the race.");
-                BtnCreatePgxFile.IsEnabled = true;
-                return;
-            }
-            */
-
             // kisan alku ja loppu datetimen muodostus.
             // ei pitäisi päästä tähän, jos on virheellisesti syötetty.
-            DateTime eventStart = (DateTime)dpEventStartDate.SelectedDate;
-            eventStart = eventStart.Add(startTime);
-            DateTime eventEnd = (DateTime)dpEventEndDate.SelectedDate;
-            eventEnd = eventEnd.Add(endTime);
-            if (eventEnd <= eventStart)
+            if (!ValidTimePeriod(startTime, endTime, out DateTime eventStart, out DateTime eventEnd))
             {
-                MessageBox.Show("Check the dates and times.\nRace start must be before the ending.");
-                BtnCreatePgxFile.IsEnabled = true;
+                BtnCreateGpxFile.IsEnabled = true;
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
@@ -445,31 +567,35 @@ namespace Raakadata
                 Cursor = tempCursor;
                 ForceCursor = false;
                 MessageBox.Show("No data found for specified time period.");
-                BtnCreatePgxFile.IsEnabled = true;
+                BtnCreateGpxFile.IsEnabled = true;
                 BtnCreateEventFile.IsEnabled = true;
                 return;
             }
 
             SeamodeGpxWriter wr = new SeamodeGpxWriter(sr.gpxRaceTime);
-
+            //string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventEndDate.SelectedDate}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.GPX";
             await Task.Run(() => wr.writeGpx(sr.gpxLines));
 
             Cursor = tempCursor;
             ForceCursor = false;
 
-            MessageBox.Show($"File {ConfigurationManager.AppSettings["gpxFile"]} was created.");
-            if (sr.DataRowErrors.Count > 0)
+            StringBuilder msg = new StringBuilder();
+            msg.AppendLine($"File {"file name here"} was created.");
+            //if (!sr.PastEnd)
+            //    msg.AppendLine("Data logging ended before the specified endpoint.");
+            foreach (string line in sr.DataRowErrors)
             {
-                MessageBox.Show($"{string.Join("\n", sr.DataRowErrors)}");
+                msg.AppendLine(line);
             }
-            BtnCreatePgxFile.IsEnabled = true;
+            msg.AppendLine("Would you like to open the folder?");
+            var res = MessageBox.Show(msg.ToString(), "File Created.", MessageBoxButton.YesNo);
+            if (res == MessageBoxResult.Yes)
+                System.Diagnostics.Process.Start(tbSavePath.Text);
+
+            BtnCreateGpxFile.IsEnabled = true;
             BtnCreateEventFile.IsEnabled = true;
             // syötetyt arvot tyhjennetään
-            dpEventStartDate.ClearValue(DatePicker.SelectedDateProperty);
-            dpEventEndDate.ClearValue(DatePicker.SelectedDateProperty);
-            tbEventStartTime.Text = "HH:mm:ss";
-            tbEventEndTime.Text = "HH:mm:ss";
-            tbEventName.Clear();
+            ResetUI();
             ListFilesInFolder();
         }
 
