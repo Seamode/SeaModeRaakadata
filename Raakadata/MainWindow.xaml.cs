@@ -34,8 +34,6 @@ namespace Raakadata
         List<DateTime> maxDTs = new List<DateTime>();
         Dictionary<TextBox, int> prevCaretIndex = new Dictionary<TextBox, int>();
         Dictionary<TextBox, string> prevText = new Dictionary<TextBox, string>();
-        private int startTimeStringLocation;
-        private int endTimeStringLocation;
         private readonly string timePlacehoder = "HH:mm:ss";
         public MainWindow()
         {
@@ -491,7 +489,7 @@ namespace Raakadata
             if (tbTime.Text[0] == '_' && tbTime.Text[1] == '_' && tbTime.Text[3] == '_' &&
                 tbTime.Text[4] == '_' && tbTime.Text[6] == '_' && tbTime.Text[7] == '_')
             {
-                tb.Text = timePlacehoder;
+                tbTime.Text = timePlacehoder;
             }
             else
             {
@@ -499,30 +497,29 @@ namespace Raakadata
             }
             tbTime.SelectionChanged += TbTime_SelectionChanged;
             tbTime.TextChanged += TbTime_TextChanged;
-            }
-            // täyttää ajan perään nollia, jos mahtuu
-            string fill = "00:00:00";
-            tb.Text += fill.Substring(tb.Text.Length);
-            // jos aika on väärässä muodossa, se tyhjennetään ja
-            // pyydetään käyttäjää lattamaan uusi
-            if (!Regex.IsMatch(tb.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
-            {
-                tb.Text = timePlacehoder;
-                tb.BorderBrush = Brushes.Red;
-                if (tb == tbEventStartTime)
-                    lblEventStartTimeError.Content = "Please re-enter a valid time.";
-                else if (tb == tbEventEndTime)
-                    lblEventEndTimeError.Content = "Please re-enter a valid time.";
-            }
-            else
-            {
-                if (tb == tbEventStartTime)
-                    lblEventStartTimeError.ClearValue(ContentProperty);
-                else if (tb == tbEventEndTime)
-                    lblEventEndTimeError.ClearValue(ContentProperty);
-            }
-
         }
+            // täyttää ajan perään nollia, jos mahtuu
+            //string fill = "00:00:00";
+            //tbTime.Text += fill.Substring(tb.Text.Length);
+            //// jos aika on väärässä muodossa, se tyhjennetään ja
+            //// pyydetään käyttäjää lattamaan uusi
+            //if (!Regex.IsMatch(tb.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
+            //{
+            //    tb.Text = timePlacehoder;
+            //    tb.BorderBrush = Brushes.Red;
+            //    if (tb == tbEventStartTime)
+            //        lblEventStartTimeError.Content = "Please re-enter a valid time.";
+            //    else if (tb == tbEventEndTime)
+            //        lblEventEndTimeError.Content = "Please re-enter a valid time.";
+            //}
+            //else
+            //{
+            //    if (tb == tbEventStartTime)
+            //        lblEventStartTimeError.ClearValue(ContentProperty);
+            //    else if (tb == tbEventEndTime)
+            //        lblEventEndTimeError.ClearValue(ContentProperty);
+            //}
+        //}
 
         private async void BtnCreateGpxFile_Click(object sender, RoutedEventArgs e)
         {
