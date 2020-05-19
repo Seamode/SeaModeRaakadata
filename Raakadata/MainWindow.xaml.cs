@@ -511,6 +511,8 @@ namespace Raakadata
             else
             {
                 tbTime.Text = tbTime.Text.Replace('_', '0');
+                prevText[tbTime] = tbTime.Text;
+                
             }
             tbTime.SelectionChanged += TbTime_SelectionChanged;
             tbTime.TextChanged += TbTime_TextChanged;
@@ -736,7 +738,9 @@ namespace Raakadata
                 tbEventStartTime.TextChanged -= TbTime_TextChanged;
                 tbEventEndTime.TextChanged -= TbTime_TextChanged;
                 tbEventStartTime.Text = $"{minDate.ToString("HH':'mm':'ss")}";
+                prevText[tbEventStartTime] = tbEventStartTime.Text;
                 tbEventEndTime.Text = $"{maxDate.ToString("HH':'mm':'ss")}";
+                prevText[tbEventEndTime] = tbEventEndTime.Text;
                 tbEventStartTime.TextChanged += TbTime_TextChanged;
                 tbEventEndTime.TextChanged += TbTime_TextChanged;
 
@@ -748,8 +752,12 @@ namespace Raakadata
                 dpEventStartDate.SelectedDate = null;
                 dpEventEndDate.SelectedDate = null;
 
+                tbEventStartTime.TextChanged -= TbTime_TextChanged;
+                tbEventEndTime.TextChanged -= TbTime_TextChanged;
                 tbEventStartTime.Text = timePlacehoder;
                 tbEventEndTime.Text = timePlacehoder;
+                tbEventStartTime.TextChanged += TbTime_TextChanged;
+                tbEventEndTime.TextChanged += TbTime_TextChanged;
             }
         }
 
