@@ -137,7 +137,7 @@
         <Label Content="Select a file to: " VerticalContentAlignment="Center" HorizontalContentAlignment="Right" Foreground="White" Grid.Row="18" Grid.Column="2" Grid.ColumnSpan="6" Background="#FF303030" BorderBrush="#FF303030" />
         <Border Grid.Row="18" Grid.Column="21" Grid.ColumnSpan="12" Background="#FF303030" BorderBrush="#FF303030" />
         <Border Grid.Row="18" Grid.Column="17" Grid.RowSpan="1" Background="#FF303030" BorderBrush="#FF303030" />
-        <Button Content="Make GPX file" Grid.Column="8" Grid.Row="18" Grid.ColumnSpan="3" Style="{StaticResource ButtonStyleBlue}"/>
+        <Button Content="Make GPX file" Grid.Column="8" Grid.Row="18" Grid.ColumnSpan="3" Style="{StaticResource ButtonStyleBlue}" Click="Button_Click"/>
     </Grid>
 
 </Window>
