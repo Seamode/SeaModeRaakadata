@@ -131,6 +131,16 @@ namespace Raakadata
             var fd = new VistaFolderBrowserDialog();
             if (fd.ShowDialog(this).GetValueOrDefault())
             {
+                tbEventStartTime.TextChanged -= TbTime_TextChanged;
+                tbEventEndTime.TextChanged -= TbTime_TextChanged;
+                tbEventStartTime.Text = timePlacehoder;
+                tbEventEndTime.Text = timePlacehoder;
+                tbEventStartTime.TextChanged += TbTime_TextChanged;
+                tbEventEndTime.TextChanged += TbTime_TextChanged;
+                prevCaretIndex[tbEventStartTime] = -1;
+                prevText[tbEventStartTime] = tbEventStartTime.Text;
+                prevCaretIndex[tbEventEndTime] = -1;
+                prevText[tbEventEndTime] = tbEventEndTime.Text;
                 tbFolderPath.Text = fd.SelectedPath;
                 ListFilesInFolder();
             }
@@ -286,6 +296,18 @@ namespace Raakadata
             //dpEventStartDate.DisplayDate = DateTime.Today;
             dpEventEndDate.SelectedDate = null;
             //dpEventEndDate.DisplayDate = DateTime.Today;
+            tbEventStartTime.TextChanged -= TbTime_TextChanged;
+            tbEventEndTime.TextChanged -= TbTime_TextChanged;
+            tbEventStartTime.Text = timePlacehoder;
+            tbEventEndTime.Text = timePlacehoder;
+            tbEventStartTime.TextChanged += TbTime_TextChanged;
+            tbEventEndTime.TextChanged += TbTime_TextChanged;
+            prevCaretIndex[tbEventStartTime] = -1;
+            prevText[tbEventStartTime] = tbEventStartTime.Text;
+            prevCaretIndex[tbEventEndTime] = -1;
+            prevText[tbEventEndTime] = tbEventEndTime.Text;
+            minDTs.Clear();
+            maxDTs.Clear();
             tbEventStartTime.Text = timePlacehoder;
             tbEventEndTime.Text = timePlacehoder;
             tbEventName.Clear();
@@ -639,6 +661,10 @@ namespace Raakadata
                         {
                             isNewLine = true;
                         }
+                        else
+                        {
+                            isNewLine = false;
+                        }
                     }
 
                     Stack<char> stringBuilderStack = new Stack<char>();
@@ -707,8 +733,12 @@ namespace Raakadata
                 dpEventStartDate.SelectedDate = minDate.Date;
                 dpEventEndDate.SelectedDate = maxDate.Date;
 
-                tbEventStartTime.Text = $"{minDate.Hour}:{minDate.Minute}:{minDate.Second}";
-                tbEventEndTime.Text = $"{maxDate.Hour}:{maxDate.Minute}:{maxDate.Second}";
+                tbEventStartTime.TextChanged -= TbTime_TextChanged;
+                tbEventEndTime.TextChanged -= TbTime_TextChanged;
+                tbEventStartTime.Text = $"{minDate.ToString("HH':'mm':'ss")}";
+                tbEventEndTime.Text = $"{maxDate.ToString("HH':'mm':'ss")}";
+                tbEventStartTime.TextChanged += TbTime_TextChanged;
+                tbEventEndTime.TextChanged += TbTime_TextChanged;
 
                 lblEventStartTimeError.ClearValue(ContentProperty);
                 lblEventEndTimeError.ClearValue(ContentProperty);
