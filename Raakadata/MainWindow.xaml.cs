@@ -39,11 +39,6 @@ namespace Raakadata
         {
             InitializeComponent();
 
-            string defaultPath = FindDatDirectory();
-            tbFolderPath.Text = defaultPath;
-            tbSavePath.Text = defaultPath;
-            if (!string.IsNullOrEmpty(defaultPath))
-                ListFilesInFolder();
 
             prevCaretIndex.Add(tbEventStartTime, -1);
             prevText.Add(tbEventStartTime, tbEventStartTime.Text);
@@ -55,8 +50,11 @@ namespace Raakadata
             tbEventEndTime.TextChanged += TbTime_TextChanged;
             tbEventEndTime.SelectionChanged += TbTime_SelectionChanged;
 
-            tbFolderPath.Text = ConfigurationManager.AppSettings["fileDirectory"];
-            tbSavePath.Text = ConfigurationManager.AppSettings["fileDirectory"];
+            string defaultPath = FindDatDirectory();
+            tbFolderPath.Text = defaultPath;
+            tbSavePath.Text = defaultPath;
+            if (!string.IsNullOrEmpty(defaultPath))
+                ListFilesInFolder();
             // jotta tiedostot on helppo valita testausta varten.
             dpEventStartDate.DisplayDate = new DateTime(2019, 09, 28);
             dpEventEndDate.DisplayDate = new DateTime(2019, 09, 28);
@@ -165,7 +163,7 @@ namespace Raakadata
                 return;
             }
             // Tarkistaa onko samannimistä tiedostoa kansiossa, jos on kysyy halutaanko sen päälle kirjoittaa.
-            string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventEndDate.SelectedDate:yyyyMMdd}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.csv";
+            string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventStartDate.SelectedDate:yyyyMMdd}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.csv";
             if (File.Exists(fullFilePath))
             {
                 var anws = MessageBox.Show("A file with that name already exists.\nIf you perceed, the file will be overwritten.\nDo you want to proceed?", "Warning, File Exists.", MessageBoxButton.YesNo);
@@ -233,7 +231,6 @@ namespace Raakadata
             }
             return true;
         }
-
 
         private bool ValidateParameters(out TimeSpan startTime, out TimeSpan endTime)
         {
@@ -311,13 +308,13 @@ namespace Raakadata
 
         private void TbFile_TextChanged(object sender, TextChangedEventArgs e)
         {
-            TextBox tb = e.Source as TextBox;
-            tb.ClearValue(BorderBrushProperty);
-            if (tb == tbFolderPath)
+            TextBox tbFile = e.Source as TextBox;
+            tbFile.ClearValue(BorderBrushProperty);
+            if (tbFile == tbFolderPath)
                 lblFolderPathError.ClearValue(ContentProperty);
-            else if (tb == tbSavePath)
+            else if (tbFile == tbSavePath)
                 lblSavePathError.ClearValue(ContentProperty);
-            else if (tb == tbEventName)
+            else if (tbFile == tbEventName)
                 lblEventNameError.ClearValue(ContentProperty);
         }
 
@@ -462,7 +459,6 @@ namespace Raakadata
                 tbTime.Text = tbTime.Text.Replace('m', '_');
                 tbTime.Text = tbTime.Text.Replace('s', '_');
                 prevText[tbTime] = tbTime.Text;
-
             }
             tbTime.TextChanged += TbTime_TextChanged;
         }
@@ -496,31 +492,14 @@ namespace Raakadata
             }
             tbTime.SelectionChanged += TbTime_SelectionChanged;
             tbTime.TextChanged += TbTime_TextChanged;
-        }
-            // täyttää ajan perään nollia, jos mahtuu
-            //string fill = "00:00:00";
-            //tbTime.Text += fill.Substring(tb.Text.Length);
-            //// jos aika on väärässä muodossa, se tyhjennetään ja
-            //// pyydetään käyttäjää lattamaan uusi
-            //if (!Regex.IsMatch(tb.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
-            //{
-            //    tb.Text = timePlacehoder;
-            //    tb.BorderBrush = Brushes.Red;
-            //    if (tb == tbEventStartTime)
-            //        lblEventStartTimeError.Content = "Please re-enter a valid time.";
-            //    else if (tb == tbEventEndTime)
-            //        lblEventEndTimeError.Content = "Please re-enter a valid time.";
-            //}
-            //else
-            //{
-            //    if (tb == tbEventStartTime)
-            //        lblEventStartTimeError.ClearValue(ContentProperty);
-            //    else if (tb == tbEventEndTime)
-            //        lblEventEndTimeError.ClearValue(ContentProperty);
-            //}
-        //}
 
-        private async void BtnCreateGpxFile_Click(object sender, RoutedEventArgs e)
+            if (tbTime == tbEventStartTime && Regex.IsMatch(tbTime.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
+                lblEventStartTimeError.ClearValue(ContentProperty);
+            else if (tbTime == tbEventEndTime && Regex.IsMatch(tbTime.Text, "^((0[0-9])|(1[0-9])|(2[0-3])):([0-5][0-9]):([0-5][0-9])$"))
+                lblEventEndTimeError.ClearValue(ContentProperty);
+        }
+
+    private async void BtnCreateGpxFile_Click(object sender, RoutedEventArgs e)
         {
             // jotta ei tapahdu tupla klikkausta.
             BtnCreateGpxFile.IsEnabled = false;
@@ -552,7 +531,8 @@ namespace Raakadata
             {
                 if (item is string)
                 {
-                    await Task.Run(() => sr.haeGpxData((string)item));
+                    string p = $"{tbFolderPath.Text}\\{(string)item}";
+                    await Task.Run(() => sr.haeGpxData(p));
                 }
             }
 
@@ -569,7 +549,7 @@ namespace Raakadata
             }
 
             SeamodeGpxWriter wr = new SeamodeGpxWriter(sr.gpxRaceTime);
-            //string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventEndDate.SelectedDate}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.GPX";
+            //string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventStartDate.SelectedDate}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.GPX";
             await Task.Run(() => wr.writeGpx(sr.gpxLines));
 
             Cursor = tempCursor;
@@ -599,7 +579,7 @@ namespace Raakadata
         {
             for (int i = 1; i < tbFilesInFolder.Items.Count; i++)
             {
-                using (FileStream fileStream = new FileStream((string)tbFilesInFolder.Items[i], FileMode.Open, FileAccess.Read))
+                using (FileStream fileStream = new FileStream($"{tbFolderPath.Text}\\{(string)tbFilesInFolder.Items[i]}", FileMode.Open, FileAccess.Read))
                 {
                     fileStream.Seek(0, SeekOrigin.Begin);
                     bool isDigit = false;
@@ -729,6 +709,9 @@ namespace Raakadata
 
                 tbEventStartTime.Text = $"{minDate.Hour}:{minDate.Minute}:{minDate.Second}";
                 tbEventEndTime.Text = $"{maxDate.Hour}:{maxDate.Minute}:{maxDate.Second}";
+
+                lblEventStartTimeError.ClearValue(ContentProperty);
+                lblEventEndTimeError.ClearValue(ContentProperty);
             }
             else
             {
@@ -828,6 +811,15 @@ namespace Raakadata
 
             prevCaretIndex[tbTime] = tbTime.CaretIndex;
             tbTime.SelectionChanged += TbTime_SelectionChanged;
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFile = new OpenFileDialog() { Filter = "CSV files (*.csv)|*.csv"};
+            if (openFile.ShowDialog() == true)
+            {
+                MessageBox.Show($"make GPX file from {openFile.FileName}");
+            }
         }
     }
 }
