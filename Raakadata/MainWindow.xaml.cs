@@ -22,6 +22,7 @@ using Microsoft.Win32;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.ComponentModel.Design;
+using System.Collections;
 
 namespace Raakadata
 {
@@ -227,7 +228,104 @@ namespace Raakadata
             ResetUI();
             ListFilesInFolder();
         }
+      
+        private async void btnMakeGpxFile_Click(object sender, RoutedEventArgs e)
+        {
 
+            if (tbSavePath.Text == "")
+            {
+                MessageBox.Show("Parse to must be filled");
+                tbSavePath.Focus();
+                return;
+            }
+            if (tbEventName.Text == "")
+            {
+                MessageBox.Show("Output file must be filled");
+                tbEventName.Focus();
+                return;
+            }
+
+            string chosenFile = null;
+            OpenFileDialog openFile = new OpenFileDialog() { Filter = "csv file (*.csv)|*.csv" };
+            if (openFile.ShowDialog() == true)
+            {
+                var res = MessageBox.Show("Are you sure", $"make GPX file from {openFile.FileName}", MessageBoxButton.YesNo);
+                if (res == MessageBoxResult.No)
+                    return;
+                chosenFile = openFile.FileName;
+            } else
+            {
+                MessageBox.Show("No file chosen");
+                return;
+            }
+
+
+            int luku = tbFilesInFolder.SelectedItems.Count;
+
+            if (chosenFile == null || chosenFile == "")
+            {
+                MessageBox.Show("No file selected");  // Tätä ei ehkä tarvita
+                return;
+            }
+            // Tarkistukset tehty - nyt generoidaan tiedosto yhdestä tiedostosta
+            // Aijojen ei ole väliä
+            DateTime start = DateTime.MinValue;
+            DateTime end = DateTime.MaxValue;
+            SeamodeReader sr = new SeamodeReader(start, end);
+
+            // Muutetaan kursori kertomaan käyttäjälle käynnissä olevasta datan käsittelystä.
+            Cursor tempCursor = Cursor;
+            Cursor = Cursors.Wait;
+            ForceCursor = true;
+
+            await Task.Run(() => sr.haeGpxData(chosenFile));
+            //sr.haeGpxData(chosenFile);
+
+            // Kursorin palautus.
+            Cursor = tempCursor;
+            ForceCursor = false;
+
+            if (sr.gpxLines != null && sr.gpxLines.Count > 0)
+            {
+                // Tehdään funktio joka hakee riviltä noin 14 aloituspäivän
+                string saveGpxFile = getGpxFileName();
+                SeamodeGpxWriter gpxWriter = new SeamodeGpxWriter(sr.gpxRaceTime);
+                gpxWriter.writeGpx(sr.gpxLines, saveGpxFile);
+                var res = MessageBox.Show("Would you like open file  folder", $"File {saveGpxFile} was created", MessageBoxButton.YesNo);
+                // avaa File Explorerin
+                if (res == MessageBoxResult.Yes)
+                    System.Diagnostics.Process.Start(tbSavePath.Text);
+            }
+            else
+            {
+                if (sr.DataRowErrors.Count > 0)
+                {
+                    StringBuilder msg = new StringBuilder();
+                    msg.Append($"There were {sr.DataRowErrors.Count} errors on the file");
+                    msg.Append("The first errorline is: ");
+                    msg.Append(sr.DataRowErrors[0]);
+                    var res = MessageBox.Show("Would you like to create error log file", msg.ToString(), MessageBoxButton.YesNo);
+                    if (res == MessageBoxResult.Yes)
+                        CreateErrorLog(sr.DataRowErrors);
+        
+                }
+            }
+        }
+        private async void CreateErrorLog(List<string> errors)
+        {
+            SeamodeWriter sw = new SeamodeWriter();
+            sw.OutFile = tbSavePath.Text + @"/" + "errorGpxParse.log";
+            ArrayList arrayListErrors = new ArrayList(errors);
+            Cursor tempCursor = Cursor;
+            Cursor = Cursors.Wait;
+            ForceCursor = true;
+            await Task.Run(() => sw.Kirjoita(arrayListErrors));
+            Cursor = tempCursor;
+            ForceCursor = false;
+            var res = MessageBox.Show("Would you like open errorLog folder", $"Errors written to file{sw.OutFile}", MessageBoxButton.YesNo);
+            if (res == MessageBoxResult.Yes)
+                System.Diagnostics.Process.Start(tbSavePath.Text);
+        }
         private bool ValidTimePeriod(TimeSpan startTime, TimeSpan endTime, out DateTime eventStart, out DateTime eventEnd)
         {
             eventStart = (DateTime)dpEventStartDate.SelectedDate;
@@ -561,7 +659,20 @@ namespace Raakadata
             }
 
             // muuten tulee tyhjä tiedosto
-            if (sr.gpxLines == null)
+            if(sr.DataRowErrors != null && sr.DataRowErrors.Count > 0)
+            {
+                StringBuilder msg2= new StringBuilder();
+                msg2.Append($"There were {sr.DataRowErrors.Count} errors on the file");
+                msg2.Append("The first errorline is: ");
+                msg2.Append(sr.DataRowErrors[0]);
+                var res2 = MessageBox.Show("Would you like to create error log file", msg2.ToString(), MessageBoxButton.YesNo);
+                if (res2 == MessageBoxResult.Yes)
+                    CreateErrorLog(sr.DataRowErrors);
+                Cursor = tempCursor;
+                ForceCursor = false;
+                return;
+            }
+            if (sr.gpxLines == null || sr.gpxLines.Count == 0)
             {
                 // Kursorin palautus.
                 Cursor = tempCursor;
@@ -574,13 +685,14 @@ namespace Raakadata
 
             SeamodeGpxWriter wr = new SeamodeGpxWriter(sr.gpxRaceTime);
             //string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventStartDate.SelectedDate}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.GPX";
-            await Task.Run(() => wr.writeGpx(sr.gpxLines));
+            string saveGpxFile = getGpxFileName();
+            await Task.Run(() => wr.writeGpx(sr.gpxLines, saveGpxFile));
 
             Cursor = tempCursor;
             ForceCursor = false;
 
             StringBuilder msg = new StringBuilder();
-            msg.AppendLine($"File {"file name here"} was created.");
+            msg.AppendLine($"File {saveGpxFile} was created.");
             //if (!sr.PastEnd)
             //    msg.AppendLine("Data logging ended before the specified endpoint.");
             foreach (string line in sr.DataRowErrors)
@@ -851,13 +963,17 @@ namespace Raakadata
             tbTime.SelectionChanged += TbTime_SelectionChanged;
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        
+        //
+        private string  getGpxFileName()
         {
-            OpenFileDialog openFile = new OpenFileDialog() { Filter = "CSV files (*.csv)|*.csv"};
-            if (openFile.ShowDialog() == true)
-            {
-                MessageBox.Show($"make GPX file from {openFile.FileName}");
-            }
+            string fullFileName;
+            if(Regex.IsMatch(tbEventName.Text, ".gpx$") || Regex.IsMatch(tbEventName.Text, ".GPX$"))
+                fullFileName = tbSavePath.Text + @"/" + tbEventName.Text;
+            else
+                fullFileName = tbSavePath.Text + @"/" + tbEventName.Text + ".gpx";
+
+            return fullFileName;
         }
     }
 }
