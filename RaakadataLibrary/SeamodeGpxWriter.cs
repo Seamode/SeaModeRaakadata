@@ -28,7 +28,7 @@ namespace RaakadataLibrary
 
             metaDataRaceTime = raceTime;
         }
-        public void writeGpx(List<GpxLine> gpxRivit)
+        public void writeGpx(List<GpxLine> gpxRivit, string path)
         {
             CultureInfo cultureInfo = new CultureInfo("fi-FI");
             writeHeader();
@@ -59,7 +59,9 @@ namespace RaakadataLibrary
             }
             trk.AppendChild(trkseq);
             rootNode.AppendChild(trk);
-            doc.Save(ConfigurationManager.AppSettings["gpxFile"]);
+            //doc.Save(ConfigurationManager.AppSettings["gpxFile"]);
+            doc.Save(path);
+
             Console.WriteLine("Valmis ");
         }
         private void writeHeader()

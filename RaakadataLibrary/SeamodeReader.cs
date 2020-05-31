@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -84,7 +85,7 @@ namespace RaakadataLibrary
 
             return files;
         }
-
+        
         // Haetaan rivit yhdelle tiedostolle
         private void ReadAndWriteDataFile(string filePath)
         {
@@ -176,6 +177,8 @@ namespace RaakadataLibrary
             bool headersFound = false;
             List<string> headerRows = new List<string>();
             int rowNum = 1;
+            int columnCount = 0;
+            int columnContErrors = 0;
             using (StreamReader sr = File.OpenText(fileName))
             {
                 string row = "";
@@ -185,44 +188,83 @@ namespace RaakadataLibrary
                     if (headersFound)
                     {
                         string[] rowValues = row.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+                        if(rowValues.Length != columnCount)
+                        {
+                            columnContErrors += 1;
+                            DataRowErrors.Add($"The number of columns {rowValues.Length} in row {rowNum} did not match the number of columns of the headerline");
+                            rowNum++;
+                            continue;
+                        } 
                         if (TimeValidation(rowValues))
                         {
                             DateTime newDateTime;
                             // Tehdään gpx instanssin luonti sekunnin välein
                             newDateTime = muodostoGpxAika(row);
-                            TimeSpan tp = newDateTime - prevDateTime;
+                           TimeSpan tp = newDateTime - prevDateTime;
                             if (tp.TotalSeconds >= 1)
                             {
-                                TeeGpx(row);
+                                TeeGpx(row, columnCount, rowNum);
                                 prevDateTime = muodostoGpxAika(row);
                                 // Aloitusaika otsikolle
-                                if(gpxRaceTime == DateTime.MinValue)
+                                if (gpxRaceTime == DateTime.MinValue)
                                 {
                                     gpxRaceTime = prevDateTime;
                                 }
                             }
                         }
-                        /*if (Regex.IsMatch(row, headerRowPattern))
-                        {
-                            headersFound = true;
-                        }*/
+
                     }
                     else
+                    {
                         FileValidation(headerRows, rowNum, row, ref validFile, ref headersFound, ref separator);
+                        if (Regex.IsMatch(row, headerRowPattern))
+                        {
+                            columnCount = row.Split(separator, StringSplitOptions.RemoveEmptyEntries).Length;
+                        }
+                    }
                     rowNum++;
                 }
             }
         }
 
-        private void TeeGpx(string luettuRivi)
+        private void TeeGpx(string luettuRivi, int columnCount, int rowNumber)
         {
             if (gpxLines == null)
                 gpxLines = new List<GpxLine>();
 
             string[] arvot = luettuRivi.Split(erotinChar);
-            DateTime aika = DateTime.ParseExact(arvot[23] + " " + arvot[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
+            // Rivillä oltava sama määrä sarakkeita kuin otsikollakin
+            if(arvot.Length != columnCount)
+            {
+                DataRowErrors.Add($"The number of columns {arvot.Length} in row {rowNumber} did not match to the headerline");
+                return;
+            }
+            DateTime aika;
+            try
+            {
+                aika = DateTime.ParseExact(arvot[23] + " " + arvot[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
+            }
+            catch (System.IndexOutOfRangeException e)
+            {
+                DataRowErrors.Add($"Parsing time at row {rowNumber} failed"); 
+                return;
+            }
+            // Tarkistetaan longitue ja latitude
+            Boolean isCorrect = true;
+            if(!Regex.IsMatch(arvot[25], ConfigurationManager.AppSettings["patLatitude"]))
+            {
+                DataRowErrors.Add($"Latitude at {rowNumber} empty or not in correct format");
+                isCorrect = false;
+            }
+            if (!Regex.IsMatch(arvot[27], ConfigurationManager.AppSettings["patLongitude"]))
+            {
+                DataRowErrors.Add($"Longitude at {rowNumber} empty or not in correct format");
+                isCorrect = false;
+            }
             //GpxLine gpxLine = new GpxLine(aika, arvot[25], arvot[27], arvot[29]);  
+            // Tarkistetaan latitude ja longitude
             GpxLine gpxLine = new GpxLine(aika);
+
             gpxLine.setLatitude(arvot[25]);
             gpxLine.setLongitude(arvot[27]);
             gpxLines.Add(gpxLine);
