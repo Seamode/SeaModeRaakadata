@@ -828,7 +828,7 @@ namespace Raakadata
                 {
                     if (minDTs.Count > maxDTs.Count)
                     {
-                        minDTs.RemoveAt(i);
+                        minDTs.RemoveAt(minDTs.Count - 1);
                         Console.Error.WriteLine($"Error: corrupted file '{fileList[i]}'");
                     }
                     else
@@ -838,6 +838,11 @@ namespace Raakadata
                 }
                 catch (Exception e)
                 {
+                    if (minDTs.Count > maxDTs.Count)
+                    {
+                        minDTs.RemoveAt(minDTs.Count - 1);
+                    }
+
                     Console.Error.WriteLine($"Error while reading file '{fileList[i]}'\n");
                 }
             }
