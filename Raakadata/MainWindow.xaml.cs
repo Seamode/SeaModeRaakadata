@@ -23,6 +23,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.ComponentModel.Design;
 using System.Collections;
+using System.Linq.Expressions;
 
 namespace Raakadata
 {
@@ -111,17 +112,11 @@ namespace Raakadata
                 tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
             }
 
-            foreach (var file in SeamodeReader.FetchFilesToList(tbFolderPath.Text))
-            {
-                tbFilesInFolder.Items.Add(file);
-            }
+            List<String> fileList = SeamodeReader.FetchFilesToList(tbFolderPath.Text);
 
-            if (tbFilesInFolder.Items.Count > 1)
+            if (fileList.Count > 0)
             {
-                PickDateTimes();
-
-                lbiCheckBox.IsEnabled = true;
-                cbSelectAll.IsEnabled = true;
+                PickDateTimes(fileList);
             }
         }
 
@@ -711,107 +706,146 @@ namespace Raakadata
             ListFilesInFolder();
         }
 
-        void PickDateTimes()
+        void PickDateTimes(List<string> fileList)
         {
-            for (int i = 1; i < tbFilesInFolder.Items.Count; i++)
+            Func<FileStream, int> readByte = (fs) => 
             {
-                using (FileStream fileStream = new FileStream($"{tbFolderPath.Text}\\{(string)tbFilesInFolder.Items[i]}", FileMode.Open, FileAccess.Read))
-                {
-                    fileStream.Seek(0, SeekOrigin.Begin);
-                    bool isDigit = false;
-                    bool isNewLine = false;
-                    char delim = ';';
+            int charValue = fs.ReadByte();
 
-                    while (!isDigit)
+            if (charValue == -1)
+            {
+                    throw new EndOfStreamException();
+            }
+            
+            return charValue;
+            };
+
+            for (int i = 0; i < fileList.Count; i++)
+            {
+               try
+               {
+                    using (FileStream fileStream = new FileStream($"{tbFolderPath.Text}\\{fileList[i]}", FileMode.Open, FileAccess.Read))
                     {
-                        char c = Convert.ToChar(fileStream.ReadByte());
+                        fileStream.Seek(0, SeekOrigin.Begin);
+                        bool isDigit = false;
+                        bool isNewLine = false;
+                        char delim = ';';
 
-                        if (isNewLine && char.IsDigit(c))
+                        while (!isDigit)
                         {
-                            List<char> stringBuilder = new List<char>();
-                            isDigit = true;
-                            isNewLine = false;
+                            char c = Convert.ToChar(readByte(fileStream));
 
-                            stringBuilder.Add(c);
-
-                            while ((c = Convert.ToChar(fileStream.ReadByte())) != delim)
+                            if (isNewLine && char.IsDigit(c))
                             {
+                                List<char> stringBuilder = new List<char>();
+                                isDigit = true;
+                                isNewLine = false;
+
                                 stringBuilder.Add(c);
+
+                                while ((c = Convert.ToChar(readByte(fileStream))) != delim)
+                                {
+                                    stringBuilder.Add(c);
+                                }
+
+                                string tempDateTimeStart = new string(stringBuilder.ToArray());
+                                stringBuilder.Clear();
+
+                                DateTime startDateTime = DateTime.Parse(tempDateTimeStart, CultureInfo.CreateSpecificCulture("fi-FI"));
+
+                                while ((c = Convert.ToChar(readByte(fileStream))) != delim)
+                                {
+                                    stringBuilder.Add(c);
+                                }
+
+                                tempDateTimeStart = new string(stringBuilder.ToArray());
+
+                                startDateTime = startDateTime.Add(TimeSpan.Parse(tempDateTimeStart, CultureInfo.CreateSpecificCulture("fi-FI")));
+                                minDTs.Add(startDateTime);
                             }
-
-                            string tempDateTimeStart = new string(stringBuilder.ToArray());
-                            stringBuilder.Clear();
-
-                            DateTime startDateTime = DateTime.Parse(tempDateTimeStart, CultureInfo.CreateSpecificCulture("fi-FI"));
-
-                            while ((c = Convert.ToChar(fileStream.ReadByte())) != delim)
+                            else if (isNewLine && char.IsLetter(c))
                             {
-                                stringBuilder.Add(c);
+                                isNewLine = false;
+
+                                delim = Convert.ToChar(readByte(fileStream));
+                                while (char.IsLetterOrDigit(delim) || delim == '_')
+                                {
+                                    delim = Convert.ToChar(readByte(fileStream));
+                                }
+
+                                while (c != '\n')
+                                {
+                                    c = Convert.ToChar(readByte(fileStream));
+                                }
+
+                                isNewLine = true;
                             }
-
-                            tempDateTimeStart = new string(stringBuilder.ToArray());
-
-                            startDateTime = startDateTime.Add(TimeSpan.Parse(tempDateTimeStart, CultureInfo.CreateSpecificCulture("fi-FI")));
-                            minDTs.Add(startDateTime);
-                        }
-                        else if (isNewLine && char.IsLetter(c))
-                        {
-                            isNewLine = false;
-
-                            delim = Convert.ToChar(fileStream.ReadByte());
-                            while (char.IsLetterOrDigit(delim) || delim == '_')
+                            else if (c == '\n')
                             {
-                                delim = Convert.ToChar(fileStream.ReadByte());
+                                isNewLine = true;
                             }
-
-                            while (c != '\n')
+                            else
                             {
-                                c = Convert.ToChar(fileStream.ReadByte());
+                                isNewLine = false;
                             }
+                        }
 
-                            isNewLine = true;
-                        }
-                        else if (c == '\n')
+                        Stack<char> stringBuilderStack = new Stack<char>();
+                        long offset = 2;
+                        isNewLine = false;
+
+                        while (!isNewLine)
                         {
-                            isNewLine = true;
+                            fileStream.Seek(-offset, SeekOrigin.End);
+                            char c = Convert.ToChar(readByte(fileStream));
+
+                            if (c == '\n')
+                            {
+                                isNewLine = true;
+                            }
+                            else
+                            {
+                                stringBuilderStack.Push(c);
+                                offset++;
+                            }
                         }
-                        else
+
+                        string lastFileLine = new string(stringBuilderStack.ToArray());
+                        DateTime endDateTime = DateTime.Parse(lastFileLine.Substring(0, lastFileLine.IndexOf(delim)), CultureInfo.CreateSpecificCulture("fi-FI"));
+                        endDateTime = endDateTime.Add(TimeSpan.Parse(lastFileLine.Substring(lastFileLine.IndexOf(delim) + 1, lastFileLine.IndexOf(delim, lastFileLine.IndexOf(delim) + 1) - (lastFileLine.IndexOf(delim) + 1)), CultureInfo.CreateSpecificCulture("fi-FI")));
+
+                        if (endDateTime.Millisecond > 0)
                         {
-                            isNewLine = false;
+                            endDateTime = endDateTime.AddSeconds(1);
                         }
+
+                        maxDTs.Add(endDateTime);
+
+                        tbFilesInFolder.Items.Add(fileList[i]);
                     }
-
-                    Stack<char> stringBuilderStack = new Stack<char>();
-                    long offset = 2;
-                    isNewLine = false;
-
-                    while (!isNewLine)
-                    {
-                        fileStream.Seek(-offset, SeekOrigin.End);
-                        char c = Convert.ToChar(fileStream.ReadByte());
-
-                        if (c == '\n')
-                        {
-                            isNewLine = true;
-                        }
-                        else
-                        {
-                            stringBuilderStack.Push(c);
-                            offset++;
-                        }
-                    }
-
-                    string lastFileLine = new string(stringBuilderStack.ToArray());
-                    DateTime endDateTime = DateTime.Parse(lastFileLine.Substring(0, lastFileLine.IndexOf(delim)), CultureInfo.CreateSpecificCulture("fi-FI"));
-                    endDateTime = endDateTime.Add(TimeSpan.Parse(lastFileLine.Substring(lastFileLine.IndexOf(delim) + 1, lastFileLine.IndexOf(delim, lastFileLine.IndexOf(delim) + 1) - (lastFileLine.IndexOf(delim) + 1)), CultureInfo.CreateSpecificCulture("fi-FI")));
-
-                    if (endDateTime.Millisecond > 0)
-                    {
-                        endDateTime = endDateTime.AddSeconds(1);
-                    }
-
-                    maxDTs.Add(endDateTime);
                 }
+                catch (EndOfStreamException e)
+                {
+                    if (minDTs.Count > maxDTs.Count)
+                    {
+                        minDTs.RemoveAt(i);
+                        Console.Error.WriteLine($"Error: corrupted file '{fileList[i]}'");
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine($"Error: no usable data found in file '{fileList[i]}'");
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.Error.WriteLine($"Error while reading file '{fileList[i]}'\n");
+                }
+            }
+
+            if (tbFilesInFolder.Items.Count > 1)
+            {
+                lbiCheckBox.IsEnabled = true;
+                cbSelectAll.IsEnabled = true;
             }
         }
 
