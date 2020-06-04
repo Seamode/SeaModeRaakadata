@@ -17,6 +17,8 @@ namespace RaakadataLibrary
         public string latitude { get; set; }
         public string longitude { get; set; }
         public double speed { get; set; }
+        public string latPosition { get; set; }
+        public string longPosition { get; set; }
 
         public void setLongitude(string longitudeIn)
         {
@@ -29,6 +31,10 @@ namespace RaakadataLibrary
             {
              longitudeIn = longitudeIn.Replace(".", "");
             }
+            if (Regex.IsMatch(longitudeIn, "^[0-6][0-9][0-9][/,]*"))
+            {
+                longitudeIn = longitudeIn.Replace(".", "");
+            }
             // Laitetaan piste kahden merkitsevän numeron jälkeen
             if (Regex.IsMatch(longitudeIn, "^[0-6][0-9][0-9].*"))
             {
@@ -39,9 +45,15 @@ namespace RaakadataLibrary
         }
         public void setLatitude(string latitudeIn)
         {
-            if (Regex.IsMatch(latitudeIn, "^[0-9][0-9][0-9][0-9].*"))
+            if (Regex.IsMatch(latitudeIn, "^[0-9][0-9][0-9][0-9][.]"))
             {
                 latitudeIn = latitudeIn.Replace(".", "");
+                latitudeIn = latitudeIn.Insert(2, ".");
+                this.latitude = laskeMinuutit(latitudeIn);
+            }
+            if (Regex.IsMatch(latitudeIn, "^[0-9][0-9][0-9][0-9][,]*"))
+            {
+                latitudeIn = latitudeIn.Replace(",", "");
                 latitudeIn = latitudeIn.Insert(2, ".");
                 this.latitude = laskeMinuutit(latitudeIn);
             }
