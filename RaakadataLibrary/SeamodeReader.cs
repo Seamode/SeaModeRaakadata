@@ -266,7 +266,9 @@ namespace RaakadataLibrary
             GpxLine gpxLine = new GpxLine(aika);
 
             gpxLine.setLatitude(arvot[25]);
+            gpxLine.latPosition = arvot[26];
             gpxLine.setLongitude(arvot[27]);
+            gpxLine.longPosition = arvot[28];
             gpxLines.Add(gpxLine);
         }
 

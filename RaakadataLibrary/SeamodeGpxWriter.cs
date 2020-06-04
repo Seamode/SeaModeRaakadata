@@ -41,8 +41,17 @@ namespace RaakadataLibrary
                 XmlNode trkpt = doc.CreateElement("trkpt");
                 XmlAttribute attrLat = doc.CreateAttribute("lat");
                 XmlAttribute attrLon = doc.CreateAttribute("lon");
-                attrLat.Value = gpxLine.latitude;
-                attrLon.Value = gpxLine.longitude;
+                // Jos eteläisellä pallonpuoliskolla miinusmerkki eteen
+                if(gpxLine.latPosition == "S")
+                    attrLat.Value = "-" + gpxLine.latitude;
+                else
+                    attrLat.Value = gpxLine.latitude;
+                // Jos läntisella pallonpuoliskolla miinusmerkki eteen
+                if(gpxLine.longPosition == "W")
+                    attrLon.Value = ($"-{gpxLine.longitude}");
+                else
+                    attrLon.Value = gpxLine.longitude;
+
                 trkpt.Attributes.Append(attrLat);
                 trkpt.Attributes.Append(attrLon);
                 XmlNode time = doc.CreateElement("time");
