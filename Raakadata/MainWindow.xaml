@@ -77,7 +77,7 @@
                 </LinearGradientBrush>
             </Button.Background>
         </Button>
-        <ListBox x:Name="tbFilesInFolder" SelectionMode="Multiple" Grid.Column="2" Grid.Row="10" Grid.ColumnSpan="9" Grid.RowSpan="7" BorderBrush="#FF303030" SelectionChanged="tbFilesInFolder_SelectionChanged">
+        <ListBox x:Name="tbFilesInFolder" SelectionMode="Multiple" Grid.Column="2" Grid.Row="10" Grid.ColumnSpan="9" Grid.RowSpan="7" BorderBrush="#FF303030" SelectionChanged="TbFilesInFolder_SelectionChanged">
             <ListBoxItem x:Name="lbiCheckBox" IsEnabled="false">
                 <CheckBox x:Name="cbSelectAll" IsEnabled="false" Checked="ListBox_SelectAll" Unchecked="ListBox_UnselectAll">Select All</CheckBox>
             </ListBoxItem>

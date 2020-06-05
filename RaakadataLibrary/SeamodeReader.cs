@@ -276,7 +276,7 @@ namespace SeaMODEParcerLibrary
         {
             // ensimmäisessä alkiossa pvm muodossa pp.kk.vvvv ja toisessa aika hh:mm:ss.nnn
             DateTime eventTime = DateTime.ParseExact(values[0] + " " + values[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
-            return (eventTime >= startTime && eventTime <= endTime);
+            return eventTime >= startTime && eventTime <= endTime;
         }
 
         // Tarkistetaan aika

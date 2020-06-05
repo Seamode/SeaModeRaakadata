@@ -76,7 +76,7 @@ namespace SeaMODEParcer
         {
             if (tbFilesInFolder.Items.Count > 1)
             {
-                tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+                tbFilesInFolder.SelectionChanged -= TbFilesInFolder_SelectionChanged;
                 cbSelectAll.Unchecked -= ListBox_UnselectAll;
                 cbSelectAll.IsChecked = false;
                 tbFilesInFolder.UnselectAll();
@@ -103,7 +103,7 @@ namespace SeaMODEParcer
                 cbSelectAll.IsEnabled = false;
 
                 cbSelectAll.Unchecked += ListBox_UnselectAll;
-                tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+                tbFilesInFolder.SelectionChanged += TbFilesInFolder_SelectionChanged;
             }
 
             List<String> fileList = SeamodeReader.FetchFilesToList(tbFolderPath.Text);
@@ -207,7 +207,7 @@ namespace SeaMODEParcer
                 msg.AppendLine(line);
             }
             msg.AppendLine("Would you like to open the folder?");
-            var res = MessageBox.Show(msg.ToString(), "File Created.", MessageBoxButton.YesNo);
+            var res = MessageBox.Show(msg.ToString(), "File created.", MessageBoxButton.YesNo);
             // avaa File Explorerin
             if (res == MessageBoxResult.Yes)
                 System.Diagnostics.Process.Start(tbSavePath.Text);
@@ -223,13 +223,15 @@ namespace SeaMODEParcer
 
             if (tbSavePath.Text == "")
             {
-                MessageBox.Show("Parse to must be filled");
+                tbSavePath.BorderBrush = Brushes.Red;
+                lblSavePathError.Content = "Valid folder path required";
                 tbSavePath.Focus();
                 return;
             }
             if (tbEventName.Text == "")
             {
-                MessageBox.Show("Output file must be filled");
+                tbEventName.BorderBrush = Brushes.Red;
+                lblEventNameError.Content = "Name for file required";
                 tbEventName.Focus();
                 return;
             }
@@ -238,13 +240,12 @@ namespace SeaMODEParcer
             OpenFileDialog openFile = new OpenFileDialog() { Filter = "csv file (*.csv)|*.csv" };
             if (openFile.ShowDialog() == true)
             {
-                var res = MessageBox.Show("Are you sure", $"make GPX file from {openFile.FileName}", MessageBoxButton.YesNo);
+                var res = MessageBox.Show($"Are you sure you want to create a GPX file from:\n{openFile.FileName}?", "Make GPX file.", MessageBoxButton.YesNo);
                 if (res == MessageBoxResult.No)
                     return;
                 chosenFile = openFile.FileName;
             } else
             {
-                MessageBox.Show("No file chosen");
                 return;
             }
 
@@ -280,7 +281,7 @@ namespace SeaMODEParcer
                 string saveGpxFile = getGpxFileName();
                 SeamodeGpxWriter gpxWriter = new SeamodeGpxWriter(sr.gpxRaceTime);
                 gpxWriter.writeGpx(sr.gpxLines, saveGpxFile);
-                var res = MessageBox.Show("Would you like open file  folder", $"File {saveGpxFile} was created", MessageBoxButton.YesNo);
+                var res = MessageBox.Show($"File {saveGpxFile} was created.\nWould you like open the folder?", "File created.", MessageBoxButton.YesNo);
                 // avaa File Explorerin
                 if (res == MessageBoxResult.Yes)
                     System.Diagnostics.Process.Start(tbSavePath.Text);
@@ -293,12 +294,14 @@ namespace SeaMODEParcer
                     msg.Append($"There were {sr.DataRowErrors.Count} errors on the file");
                     msg.Append("The first errorline is: ");
                     msg.Append(sr.DataRowErrors[0]);
-                    var res = MessageBox.Show("Would you like to create error log file", msg.ToString(), MessageBoxButton.YesNo);
+                    var res = MessageBox.Show($"{msg}\nWould you like to create error log file?", "Errors found in file", MessageBoxButton.YesNo);
                     if (res == MessageBoxResult.Yes)
                         CreateErrorLog(sr.DataRowErrors);
         
                 }
             }
+            ResetUI();
+            ListFilesInFolder();
         }
         private async void CreateErrorLog(List<string> errors)
         {
@@ -656,7 +659,7 @@ namespace SeaMODEParcer
                 msg2.Append($"There were {sr.DataRowErrors.Count} errors on the file");
                 msg2.Append("The first errorline is: ");
                 msg2.Append(sr.DataRowErrors[0]);
-                var res2 = MessageBox.Show("Would you like to create error log file", msg2.ToString(), MessageBoxButton.YesNo);
+                var res2 = MessageBox.Show($"{msg2}\nWould you like to create error log file?", "Errors found in file", MessageBoxButton.YesNo);
                 if (res2 == MessageBoxResult.Yes)
                     CreateErrorLog(sr.DataRowErrors);
                 Cursor = tempCursor;
@@ -906,7 +909,7 @@ namespace SeaMODEParcer
             }
         }
 
-        private void tbFilesInFolder_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void TbFilesInFolder_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (e.RemovedItems.Contains(lbiCheckBox))
             {
@@ -922,9 +925,9 @@ namespace SeaMODEParcer
                 cbSelectAll.IsChecked = false;
                 cbSelectAll.Unchecked += ListBox_UnselectAll;
 
-                tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+                tbFilesInFolder.SelectionChanged -= TbFilesInFolder_SelectionChanged;
                 lbiCheckBox.IsSelected = false;
-                tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+                tbFilesInFolder.SelectionChanged += TbFilesInFolder_SelectionChanged;
                 UpdateDateTime();
             }
             else if (!lbiCheckBox.IsSelected && tbFilesInFolder.SelectedItems.Count == tbFilesInFolder.Items.Count - 1)
@@ -940,18 +943,18 @@ namespace SeaMODEParcer
 
         private void ListBox_SelectAll(object sender, RoutedEventArgs e)
         {
-            tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+            tbFilesInFolder.SelectionChanged -= TbFilesInFolder_SelectionChanged;
             tbFilesInFolder.SelectAll();
             UpdateDateTime();
-            tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+            tbFilesInFolder.SelectionChanged += TbFilesInFolder_SelectionChanged;
         }
 
         private void ListBox_UnselectAll(object sender, RoutedEventArgs e)
         {
-            tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+            tbFilesInFolder.SelectionChanged -= TbFilesInFolder_SelectionChanged;
             tbFilesInFolder.UnselectAll();
             UpdateDateTime();
-            tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+            tbFilesInFolder.SelectionChanged += TbFilesInFolder_SelectionChanged;
         }
 
         private void TbTime_SelectionChanged(object sender, RoutedEventArgs e)
