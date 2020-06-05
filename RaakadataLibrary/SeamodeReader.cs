@@ -37,7 +37,7 @@ namespace RaakadataLibrary
         private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(1);
         private DateTime? prevEventTime = null;
         private readonly string headerRowPattern = "^Date_PC(.*)Time_PC";
-        private char erotinChar = ';'; 
+        private char separatorChar = ';'; 
 
         public string TmpFile = Path.GetTempFileName();
         public List<GpxLine> gpxLines { get; set; }
@@ -161,7 +161,7 @@ namespace RaakadataLibrary
                     {
                         separator[0] = headerMatch.Groups[1].ToString();
                         char[] chArray = separator[0].ToCharArray();
-                        erotinChar = chArray[0];
+                        separatorChar = chArray[0];
                         headersFound = true;
                     }
                     break;
@@ -170,7 +170,7 @@ namespace RaakadataLibrary
                 headerRows.Add(row);
         }
 
-        public void haeGpxData(string fileName)
+        public void fetchGPXData(string fileName)
         {
             string[] separator = { ";" };
             bool validFile = true;
@@ -199,12 +199,12 @@ namespace RaakadataLibrary
                         {
                             DateTime newDateTime;
                             // Tehdään gpx instanssin luonti sekunnin välein
-                            newDateTime = muodostoGpxAika(row);
+                            newDateTime = formGPXTime(row);
                            TimeSpan tp = newDateTime - prevDateTime;
                             if (tp.TotalSeconds >= 1)
                             {
-                                TeeGpx(row, columnCount, rowNum);
-                                prevDateTime = muodostoGpxAika(row);
+                                makeGPX(row, columnCount, rowNum);
+                                prevDateTime = formGPXTime(row);
                                 // Aloitusaika otsikolle
                                 if (gpxRaceTime == DateTime.MinValue)
                                 {
@@ -227,12 +227,12 @@ namespace RaakadataLibrary
             }
         }
 
-        private void TeeGpx(string luettuRivi, int columnCount, int rowNumber)
+        private void makeGPX(string luettuRivi, int columnCount, int rowNumber)
         {
             if (gpxLines == null)
                 gpxLines = new List<GpxLine>();
 
-            string[] arvot = luettuRivi.Split(erotinChar);
+            string[] arvot = luettuRivi.Split(separatorChar);
             // Rivillä oltava sama määrä sarakkeita kuin otsikollakin
             if(arvot.Length != columnCount)
             {
@@ -304,21 +304,21 @@ namespace RaakadataLibrary
                 return false;
         }
 
-        private DateTime muodostoGpxAika(string luettuRivi)
+        private DateTime formGPXTime(string luettuRivi)
         {
             // Väärä erotinmerkki
-            string[] arvot = luettuRivi.Split(erotinChar);
-            DateTime aika;
+            string[] values = luettuRivi.Split(separatorChar);
+            DateTime time;
             try
             {
-                aika = DateTime.ParseExact(arvot[23] + " " + arvot[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
+                time = DateTime.ParseExact(values[23] + " " + values[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
             }
             catch (System.IndexOutOfRangeException e)
             {
                 // Laitetaan ajalle jokin outo arvo, jos rikkinäinen data
-                aika = DateTime.MinValue;
+                time = DateTime.MinValue;
             }
-            return aika;
+            return time;
         }
     }
 }
