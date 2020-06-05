@@ -34,7 +34,7 @@ namespace RaakadataLibrary
         private readonly CultureInfo cultureInfo = new CultureInfo("fi-FI");
         private int columnCount;
         // liian suuri ajanmuutos = virhe, mutta missä on raja?
-        private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(1);
+        private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(10);
         private DateTime? prevEventTime = null;
         private readonly string headerRowPattern = "^Date_PC(.*)Time_PC";
         private char separatorChar = ';'; 
@@ -200,7 +200,7 @@ namespace RaakadataLibrary
                             DateTime newDateTime;
                             // Tehdään gpx instanssin luonti sekunnin välein
                             newDateTime = formGPXTime(row);
-                           TimeSpan tp = newDateTime - prevDateTime;
+                            TimeSpan tp = newDateTime - prevDateTime;
                             if (tp.TotalSeconds >= 1)
                             {
                                 makeGPX(row, columnCount, rowNum);
@@ -276,7 +276,7 @@ namespace RaakadataLibrary
         {
             // ensimmäisessä alkiossa pvm muodossa pp.kk.vvvv ja toisessa aika hh:mm:ss.nnn
             DateTime eventTime = DateTime.ParseExact(values[0] + " " + values[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
-            return (eventTime >= startTime && eventTime <= endTime) ? true : false;
+            return (eventTime >= startTime && eventTime <= endTime);
         }
 
         // Tarkistetaan aika
