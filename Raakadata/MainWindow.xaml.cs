@@ -273,7 +273,7 @@ namespace Raakadata
             Cursor = Cursors.Wait;
             ForceCursor = true;
 
-            await Task.Run(() => sr.haeGpxData(chosenFile));
+            await Task.Run(() => sr.fetchGPXData(chosenFile));
             //sr.haeGpxData(chosenFile);
 
             // Kursorin palautus.
@@ -649,7 +649,7 @@ namespace Raakadata
                 if (item is string)
                 {
                     string p = $"{tbFolderPath.Text}\\{(string)item}";
-                    await Task.Run(() => sr.haeGpxData(p));
+                    await Task.Run(() => sr.fetchGPXData(p));
                 }
             }
 
