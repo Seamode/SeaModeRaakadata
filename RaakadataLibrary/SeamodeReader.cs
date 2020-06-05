@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace RaakadataLibrary
+namespace SeaMODEParcerLibrary
 {
     public class SeamodeReader
     {

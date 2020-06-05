@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace RaakadataLibrary
+namespace SeaMODEParcerLibrary
 {
     // Kirjoitetaan valikoidut rivit yhdistelmätiedostoon.
     public class SeamodeWriter

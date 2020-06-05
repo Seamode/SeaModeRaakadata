@@ -1,4 +1,4 @@
-﻿using RaakadataLibrary;
+﻿using SeaMODEParcerLibrary;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -25,7 +25,7 @@ using System.ComponentModel.Design;
 using System.Collections;
 using System.Linq.Expressions;
 
-namespace Raakadata
+namespace SeaMODEParcer
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
