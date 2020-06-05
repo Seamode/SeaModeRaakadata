@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace RaakadataLibrary
+namespace SeaMODEParcerLibrary
 {
     public class SeamodeReader
     {
@@ -27,14 +27,14 @@ namespace RaakadataLibrary
         private bool headersWritten = false;
         private readonly DateTime startTime;
         private readonly DateTime endTime;
-        public bool PastEnd { get; private set; } = false;
+        private bool pastEnd = false;
         private const string startPattern_c = "^SeaMODE_";
         private readonly string startPattern;
         private readonly string endPattern;
         private readonly CultureInfo cultureInfo = new CultureInfo("fi-FI");
         private int columnCount;
         // liian suuri ajanmuutos = virhe, mutta missä on raja?
-        private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(1);
+        private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(10);
         private DateTime? prevEventTime = null;
         private readonly string headerRowPattern = "^Date_PC(.*)Time_PC";
         private char separatorChar = ';'; 
@@ -77,7 +77,7 @@ namespace RaakadataLibrary
             int len = example.Length;
             foreach (var fi in di.GetFiles())
             {
-                if (PastEnd)
+                if (pastEnd)
                     break;
                 if ((Regex.IsMatch(fi.Name, startPattern) || Regex.IsMatch(fi.Name, endPattern)) && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == len)
                     files.Add(fi.FullName);
@@ -98,7 +98,7 @@ namespace RaakadataLibrary
             using (StreamReader sr = File.OpenText(filePath))
             {
                 string row = "";
-                while ((row = sr.ReadLine()) != null && validFile && !PastEnd)
+                while ((row = sr.ReadLine()) != null && validFile && !pastEnd)
                 {
                     if (headersFound)
                     {
@@ -132,6 +132,14 @@ namespace RaakadataLibrary
                 }
                 if (!validFile)
                     DataRowErrors.Add($"There was something wrong with the xml section in file:\n{filePath}");
+            }
+            if (!pastEnd)
+            {
+                TimeSpan timeDiff = endTime - (DateTime)prevEventTime;
+                if (timeDiff > TimeSpan.FromSeconds(1))
+                {
+                    DataRowErrors.Add($"Data logging ended {timeDiff:hh\\:mm\\:ss\\.f} before the specified endpoint.");
+                }
             }
         }
 
@@ -200,7 +208,7 @@ namespace RaakadataLibrary
                             DateTime newDateTime;
                             // Tehdään gpx instanssin luonti sekunnin välein
                             newDateTime = formGPXTime(row);
-                           TimeSpan tp = newDateTime - prevDateTime;
+                            TimeSpan tp = newDateTime - prevDateTime;
                             if (tp.TotalSeconds >= 1)
                             {
                                 makeGPX(row, columnCount, rowNum);
@@ -276,7 +284,7 @@ namespace RaakadataLibrary
         {
             // ensimmäisessä alkiossa pvm muodossa pp.kk.vvvv ja toisessa aika hh:mm:ss.nnn
             DateTime eventTime = DateTime.ParseExact(values[0] + " " + values[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
-            return (eventTime >= startTime && eventTime <= endTime) ? true : false;
+            return eventTime >= startTime && eventTime <= endTime;
         }
 
         // Tarkistetaan aika
@@ -286,7 +294,7 @@ namespace RaakadataLibrary
             DateTime eventTime = DateTime.ParseExact(values[0] + " " + values[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
             if (eventTime > endTime)
             {
-                PastEnd = true;
+                pastEnd = true;
                 return false;
             }
             else if (eventTime >= startTime && eventTime <= endTime)
