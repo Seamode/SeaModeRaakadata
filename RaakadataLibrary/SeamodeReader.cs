@@ -27,7 +27,7 @@ namespace SeaMODEParcerLibrary
         private bool headersWritten = false;
         private readonly DateTime startTime;
         private readonly DateTime endTime;
-        public bool PastEnd { get; private set; } = false;
+        private bool pastEnd = false;
         private const string startPattern_c = "^SeaMODE_";
         private readonly string startPattern;
         private readonly string endPattern;
@@ -77,7 +77,7 @@ namespace SeaMODEParcerLibrary
             int len = example.Length;
             foreach (var fi in di.GetFiles())
             {
-                if (PastEnd)
+                if (pastEnd)
                     break;
                 if ((Regex.IsMatch(fi.Name, startPattern) || Regex.IsMatch(fi.Name, endPattern)) && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == len)
                     files.Add(fi.FullName);
@@ -98,7 +98,7 @@ namespace SeaMODEParcerLibrary
             using (StreamReader sr = File.OpenText(filePath))
             {
                 string row = "";
-                while ((row = sr.ReadLine()) != null && validFile && !PastEnd)
+                while ((row = sr.ReadLine()) != null && validFile && !pastEnd)
                 {
                     if (headersFound)
                     {
@@ -132,6 +132,14 @@ namespace SeaMODEParcerLibrary
                 }
                 if (!validFile)
                     DataRowErrors.Add($"There was something wrong with the xml section in file:\n{filePath}");
+            }
+            if (!pastEnd)
+            {
+                TimeSpan timeDiff = endTime - (DateTime)prevEventTime;
+                if (timeDiff > TimeSpan.FromSeconds(1))
+                {
+                    DataRowErrors.Add($"Data logging ended {timeDiff:hh\\:mm\\:ss\\.f} before the specified endpoint.");
+                }
             }
         }
 
@@ -286,7 +294,7 @@ namespace SeaMODEParcerLibrary
             DateTime eventTime = DateTime.ParseExact(values[0] + " " + values[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
             if (eventTime > endTime)
             {
-                PastEnd = true;
+                pastEnd = true;
                 return false;
             }
             else if (eventTime >= startTime && eventTime <= endTime)

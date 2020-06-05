@@ -200,8 +200,6 @@ namespace SeaMODEParcer
             // Ilmoitus luonnista ja mahdolliset virheet.
             StringBuilder msg = new StringBuilder();
             msg.AppendLine($"File {fullFilePath} was created.");
-            if (!sr.PastEnd)
-                msg.AppendLine("Data logging ended before the specified endpoint.");
             foreach (string line in sr.DataRowErrors)
             {
                 msg.AppendLine(line);
@@ -220,22 +218,25 @@ namespace SeaMODEParcer
       
         private async void BtnMakeGpxFile_Click(object sender, RoutedEventArgs e)
         {
-
-            if (tbSavePath.Text == "")
+            bool canMakeFile = true;
+            if (string.IsNullOrWhiteSpace(tbSavePath.Text) || !Directory.Exists(tbSavePath.Text))
             {
                 tbSavePath.BorderBrush = Brushes.Red;
                 lblSavePathError.Content = "Valid folder path required";
                 tbSavePath.Focus();
-                return;
+                canMakeFile = false;
             }
-            if (tbEventName.Text == "")
+            if (string.IsNullOrWhiteSpace(tbEventName.Text))
             {
                 tbEventName.BorderBrush = Brushes.Red;
                 lblEventNameError.Content = "Name for file required";
                 tbEventName.Focus();
+                canMakeFile = false;
+            }
+            if (!canMakeFile)
+            {
                 return;
             }
-
             string chosenFile = null;
             OpenFileDialog openFile = new OpenFileDialog() { Filter = "csv file (*.csv)|*.csv" };
             if (openFile.ShowDialog() == true)
