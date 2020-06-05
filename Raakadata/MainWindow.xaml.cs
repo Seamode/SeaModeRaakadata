@@ -36,16 +36,78 @@ namespace Raakadata
         List<DateTime> maxDTs = new List<DateTime>();
         Dictionary<TextBox, int> prevCaretIndex = new Dictionary<TextBox, int>();
         Dictionary<TextBox, string> prevText = new Dictionary<TextBox, string>();
+        Dictionary<TextBox, int> selectedChar = new Dictionary<TextBox, int>();
+        Dictionary<TextBox, int> selectedCount = new Dictionary<TextBox, int>();
+        Dictionary<TextBox, Border> caret = new Dictionary<TextBox, Border>();
+        Dictionary<TextBox, Border> selectionCaret = new Dictionary<TextBox, Border>();
+        Dictionary<TextBox, Stack<string>> undoHistory = new Dictionary<TextBox, Stack<string>>();
+        Dictionary<TextBox, Stack<string>> redoHistory = new Dictionary<TextBox, Stack<string>>();
+        Dictionary<TextBox, bool> isModified = new Dictionary<TextBox, bool>();
+        bool mouseLeftButtonSelect = false;
+        double prevMouseX;
         private readonly string timePlacehoder = "HH:mm:ss";
         public MainWindow()
         {
             InitializeComponent();
 
+            var redirectUndoRedo = new Action<UIElement>((element) =>
+            {
+                CommandManager.AddPreviewCanExecuteHandler(element,
+                    new CanExecuteRoutedEventHandler((sender, eventArgs) =>
+                    {
+                        if (eventArgs.Command == ApplicationCommands.Undo || eventArgs.Command == ApplicationCommands.Redo)
+                        {
+                            eventArgs.CanExecute = true;
+                        }
+                    }));
+
+                CommandManager.AddPreviewExecutedHandler(element,
+                    new ExecutedRoutedEventHandler((sender, eventArgs) =>
+                    {
+                        if (eventArgs.Command == ApplicationCommands.Undo || eventArgs.Command == ApplicationCommands.Redo)
+                        {
+                            eventArgs.Handled = true;
+                        }
+
+                        if (eventArgs.Command == ApplicationCommands.Undo)
+                        {
+                            if (this.canUndo())
+                            {
+                                this.undo(sender);
+                            }
+
+                            eventArgs.Handled = true;
+
+                        }
+                        else if (eventArgs.Command == ApplicationCommands.Redo)
+                        {
+                            if (this.canRedo())
+                            {
+                                this.redo(sender);
+                            }
+                        }
+                    }));
+            });
 
             prevCaretIndex.Add(tbEventStartTime, -1);
             prevText.Add(tbEventStartTime, tbEventStartTime.Text);
+            selectedChar.Add(tbEventStartTime, -1);
+            selectedCount.Add(tbEventStartTime, -1);
+            EditingCommands.ToggleInsert.Execute(null, tbEventStartTime);
             prevCaretIndex.Add(tbEventEndTime, -1);
             prevText.Add(tbEventEndTime, tbEventEndTime.Text);
+            selectedChar.Add(tbEventEndTime, -1);
+            selectedCount.Add(tbEventEndTime, -1);
+            EditingCommands.ToggleInsert.Execute(null, tbEventEndTime);
+
+            undoHistory[tbEventStartTime] = new Stack<string>();
+            redoHistory[tbEventStartTime] = new Stack<string>();
+            isModified[tbEventStartTime] = true;
+            redirectUndoRedo(tbEventStartTime);
+            undoHistory[tbEventEndTime] = new Stack<string>();
+            redoHistory[tbEventEndTime] = new Stack<string>();
+            isModified[tbEventEndTime] = true;
+            redirectUndoRedo(tbEventEndTime);
 
             tbEventStartTime.TextChanged += TbTime_TextChanged;
             tbEventStartTime.SelectionChanged += TbTime_SelectionChanged;
@@ -61,8 +123,97 @@ namespace Raakadata
             dpEventStartDate.DisplayDate = new DateTime(2019, 09, 28);
             dpEventEndDate.DisplayDate = new DateTime(2019, 09, 28);
         }
+        bool canUndo()
+        {
+            return true;
+        }
+        void undo(object sender)
+        {
+            TextBox tbTime = sender as TextBox;
+            tbTime.TextChanged -= TbTime_TextChanged;
+            tbTime.SelectionChanged -= TbTime_SelectionChanged;
 
+            int tempCaretIndex = tbTime.CaretIndex;
+            int tempSelectionLength = tbTime.SelectionLength;
 
+            if (undoHistory[tbTime].Count > 0)
+            {
+                if (isModified[tbTime] == true)
+                {
+                    redoHistory[tbTime].Push(tbTime.Text);
+                }
+                else
+                {
+                    isModified[tbTime] = true;
+                }
+                tbTime.Text = undoHistory[tbTime].Pop();
+                prevText[tbTime] = tbTime.Text;
+            }
+
+            if (selectedChar[tbTime] == tempCaretIndex)
+            {
+                tbTime.CaretIndex = tempCaretIndex;
+
+                for (int i = 0; i < tempSelectionLength; i++)
+                {
+                    EditingCommands.SelectRightByCharacter.Execute(null, tbTime);
+                }
+            }
+            else
+            {
+                tbTime.CaretIndex = tempCaretIndex + tempSelectionLength;
+
+                for (int i = 0; i < tempSelectionLength; i++)
+                {
+                    EditingCommands.SelectLeftByCharacter.Execute(null, tbTime);
+                }
+            }
+
+            tbTime.TextChanged += TbTime_TextChanged;
+            tbTime.SelectionChanged += TbTime_SelectionChanged;
+        }
+        bool canRedo()
+        {
+            return true;
+        }
+        void redo(object sender)
+        {
+            TextBox tbTime = sender as TextBox;
+            tbTime.TextChanged -= TbTime_TextChanged;
+            tbTime.SelectionChanged -= TbTime_SelectionChanged;
+
+            int tempCaretIndex = tbTime.CaretIndex;
+            int tempSelectionLength = tbTime.SelectionLength;
+
+            if (redoHistory[tbTime].Count > 0)
+            {
+                undoHistory[tbTime].Push(tbTime.Text);
+                tbTime.Text = redoHistory[tbTime].Pop();
+                prevText[tbTime] = tbTime.Text;
+            }
+
+            if (selectedChar[tbTime] == tempCaretIndex)
+            {
+                tbTime.CaretIndex = tempCaretIndex;
+
+                for (int i = 0; i < tempSelectionLength; i++)
+                {
+                    EditingCommands.SelectRightByCharacter.Execute(null, tbTime);
+                }
+            }
+            else
+            {
+                tbTime.CaretIndex = tempCaretIndex + tempSelectionLength;
+
+                for (int i = 0; i < tempSelectionLength; i++)
+                {
+                    EditingCommands.SelectLeftByCharacter.Execute(null, tbTime);
+                }
+            }
+
+            tbTime.TextChanged += TbTime_TextChanged;
+            tbTime.SelectionChanged += TbTime_SelectionChanged;
+        }
         private string FindDatDirectory()
         {
             if (Directory.Exists(ConfigurationManager.AppSettings["fileDirectory"]))
@@ -438,7 +589,7 @@ namespace Raakadata
             TextBox tbTime = e.Source as TextBox;
             tbTime.ClearValue(BorderBrushProperty);
             const string template = "__:__:__";
-            int moveCaret = 1;
+            bool copyText = true;
 
             tbTime.SelectionChanged -= TbTime_SelectionChanged;
             tbTime.TextChanged -= TbTime_TextChanged;
@@ -447,10 +598,21 @@ namespace Raakadata
             {
                 if (change.AddedLength > 0)
                 {
+                    char[] prevString;
+
                     tbTime.Text = tbTime.Text.Replace('H', '_');
                     tbTime.Text = tbTime.Text.Replace('m', '_');
                     tbTime.Text = tbTime.Text.Replace('s', '_');
-                    char[] prevString = prevText[tbTime].ToArray();
+
+                    if (change.Offset + change.AddedLength < 9 && change.RemovedLength > change.AddedLength)
+                    {
+                        prevString = (prevText[tbTime].Substring(0, change.Offset + change.AddedLength) + prevText[tbTime].Substring(change.Offset + change.AddedLength + (change.RemovedLength - change.AddedLength))).ToArray();
+                    }
+                    else
+                    {
+                        prevString = prevText[tbTime].ToArray();
+                    }
+
                     char[] newString = new char[change.Offset + change.AddedLength > 8 ? (8 - change.Offset + change.AddedLength) - change.AddedLength : change.AddedLength];
                     tbTime.Text.CopyTo(change.Offset, newString, 0, newString.Length);
 
@@ -464,7 +626,7 @@ namespace Raakadata
                             case 0 when !char.IsDigit(addedChar):
                                 goto discard;
 
-                            case 0 when int.Parse(addedChar.ToString()) == 2 && int.Parse(char.IsDigit(conv = (change.Offset + i + 1 > change.Offset + change.AddedLength - 1 ? tbTime.Text[1] : newString[i + 1])) ? conv.ToString() : "0") > 3:
+                            case 0 when /*change.RemovedLength > change.AddedLength && change.Offset + change.AddedLength != 1  &&*/  (change.AddedLength == 1 && !(change.RemovedLength > 1) || change.AddedLength > 1) && int.Parse(addedChar.ToString()) >= 2 && int.Parse(char.IsDigit(conv = (change.Offset + i + 1 > change.Offset + change.AddedLength - 1 ? tbTime.Text[1] : newString[i + 1])) ? conv.ToString() : "0") > 3:
                                 if (change.Offset + i + 1 > change.Offset + change.AddedLength - 1)
                                 {
                                     prevString[1] = '3';
@@ -472,6 +634,11 @@ namespace Raakadata
                                 else
                                 {
                                     newString[i + 1] = '3';
+                                }
+
+                                if (int.Parse(addedChar.ToString()) >= 2)
+                                {
+                                    newString[i] = '2';
                                 }
                                 break;
 
@@ -515,47 +682,63 @@ namespace Raakadata
 
                             discard:
                                 tbTime.Text = prevText[tbTime];
-                                moveCaret = 0;
+                                copyText = false;
                                 break;
 
                             default:
                                 break;
                         }
 
-                        if (moveCaret == 0)
+                        if (copyText == false)
                         {
-                            tbTime.CaretIndex = change.Offset;
-                            prevCaretIndex[tbTime] = -1;
+                            tbTime.CaretIndex = prevCaretIndex[tbTime];
                             break;
                         }
                     }
 
-                    if (moveCaret == 1)
+                    if (copyText == true)
                     {
-
                         newString.CopyTo(prevString, change.Offset);
                         tbTime.Text = new string(prevString);
-                        tbTime.CaretIndex = change.Offset + 1;
+                        tbTime.CaretIndex = change.Offset + change.AddedLength;
                     }
                 }
 
-                else if (change.RemovedLength > change.AddedLength)
+                if (change.RemovedLength > change.AddedLength && copyText == true)
                 {
                     if (change.Offset < 8)
                     {
-                        tbTime.Text = tbTime.Text.Insert(change.Offset + change.AddedLength, template.Substring(change.Offset + change.AddedLength, change.RemovedLength - change.AddedLength));
-
-                        if (tbTime.Text.Length > 8)
+                        if (template[change.Offset] == ':')
                         {
-                            tbTime.Text = prevText[tbTime];
+                            char[] newString = tbTime.Text.ToArray();
+                            newString[change.Offset - 1] = '_';
+                            tbTime.Text = new string(newString);
                         }
+
+                        tbTime.Text = tbTime.Text.Insert(change.Offset + change.AddedLength, template.Substring(change.Offset + change.AddedLength, change.RemovedLength - change.AddedLength));
 
                         if (change.Offset != 0)
                         {
-                            tbTime.CaretIndex = change.Offset - 1;
-                            tbTime.SelectionLength = 1;
+                            tbTime.CaretIndex = change.Offset;
                         }
                     }
+                }
+            }
+
+            if (tbTime.Text != prevText[tbTime])
+            {
+                if (isModified[tbTime] == true)
+                {
+                    undoHistory[tbTime].Push(prevText[tbTime]);
+                }
+                else
+                {
+                    isModified[tbTime] = true;
+                }
+
+                if (redoHistory[tbTime].Count > 0)
+                {
+                    redoHistory[tbTime].Clear();
                 }
             }
 
@@ -575,6 +758,7 @@ namespace Raakadata
                 tbTime.Text = tbTime.Text.Replace('s', '_');
                 prevText[tbTime] = tbTime.Text;
             }
+            caret[tbTime].Visibility = Visibility.Visible;
             tbTime.TextChanged += TbTime_TextChanged;
         }
 
@@ -596,17 +780,25 @@ namespace Raakadata
             tbTime.SelectionChanged -= TbTime_SelectionChanged;
             tbTime.TextChanged -= TbTime_TextChanged;
 
-            if (tbTime.Text[0] == '_' && tbTime.Text[1] == '_' && tbTime.Text[3] == '_' &&
-                tbTime.Text[4] == '_' && tbTime.Text[6] == '_' && tbTime.Text[7] == '_')
+            if (!(FocusManager.GetFocusedElement(this) is ListBoxItem))
             {
-                tbTime.Text = timePlacehoder;
+                int underscores = tbTime.Text.Count((c) => c == '_');
+                if (underscores == 6)
+                {
+                    tbTime.Text = timePlacehoder;
+
+                }
+                else if (underscores > 0)
+                {
+                    undoHistory[tbTime].Push(tbTime.Text);
+                    tbTime.Text = tbTime.Text.Replace('_', '0');
+                    prevText[tbTime] = tbTime.Text;
+                    isModified[tbTime] = false;
+
+                }
             }
-            else
-            {
-                tbTime.Text = tbTime.Text.Replace('_', '0');
-                prevText[tbTime] = tbTime.Text;
-                
-            }
+            caret[tbTime].Visibility = Visibility.Collapsed;
+            selectionCaret[tbTime].Visibility = Visibility.Collapsed;
             tbTime.SelectionChanged += TbTime_SelectionChanged;
             tbTime.TextChanged += TbTime_TextChanged;
 
@@ -888,12 +1080,30 @@ namespace Raakadata
 
                 tbEventStartTime.TextChanged -= TbTime_TextChanged;
                 tbEventEndTime.TextChanged -= TbTime_TextChanged;
+                tbEventStartTime.SelectionChanged -= TbTime_SelectionChanged;
+                tbEventEndTime.SelectionChanged -= TbTime_SelectionChanged;
+
                 tbEventStartTime.Text = $"{minDate.ToString("HH':'mm':'ss")}";
+                if (isModified[tbEventStartTime] != false)
+                {
+                    undoHistory[tbEventStartTime].Push(prevText[tbEventStartTime] == "HH:mm:ss" ? "__:__:__" : prevText[tbEventStartTime]);
+
+                }
                 prevText[tbEventStartTime] = tbEventStartTime.Text;
+
                 tbEventEndTime.Text = $"{maxDate.ToString("HH':'mm':'ss")}";
+                if (isModified[tbEventEndTime] != false)
+                {
+                    undoHistory[tbEventEndTime].Push(prevText[tbEventEndTime] == "HH:mm:ss" ? "__:__:__" : prevText[tbEventEndTime]);
+                }
                 prevText[tbEventEndTime] = tbEventEndTime.Text;
+
+                tbEventStartTime.SelectionChanged += TbTime_SelectionChanged;
+                tbEventEndTime.SelectionChanged += TbTime_SelectionChanged;
                 tbEventStartTime.TextChanged += TbTime_TextChanged;
                 tbEventEndTime.TextChanged += TbTime_TextChanged;
+                isModified[tbEventStartTime] = false;
+                isModified[tbEventEndTime] = false;
 
                 lblEventStartTimeError.ClearValue(ContentProperty);
                 lblEventEndTimeError.ClearValue(ContentProperty);
@@ -905,10 +1115,16 @@ namespace Raakadata
 
                 tbEventStartTime.TextChanged -= TbTime_TextChanged;
                 tbEventEndTime.TextChanged -= TbTime_TextChanged;
+                tbEventStartTime.SelectionChanged -= TbTime_SelectionChanged;
+                tbEventEndTime.SelectionChanged -= TbTime_SelectionChanged;
                 tbEventStartTime.Text = timePlacehoder;
                 tbEventEndTime.Text = timePlacehoder;
                 tbEventStartTime.TextChanged += TbTime_TextChanged;
                 tbEventEndTime.TextChanged += TbTime_TextChanged;
+                tbEventStartTime.SelectionChanged += TbTime_SelectionChanged;
+                tbEventEndTime.SelectionChanged += TbTime_SelectionChanged;
+
+
             }
         }
 
@@ -959,50 +1175,433 @@ namespace Raakadata
             UpdateDateTime();
             tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
         }
+        private void DrawSelectionCaret(TextBox tbTime, bool trailing)
+        {
+            Rect charRect = tbTime.GetRectFromCharacterIndex(trailing == true ? tbTime.CaretIndex + tbTime.SelectionLength - 1 : tbTime.CaretIndex, trailing == true ? true : false);
+
+            Canvas.SetLeft(selectionCaret[tbTime], charRect.Location.X);
+            Canvas.SetTop(selectionCaret[tbTime], charRect.Location.Y);
+        }
 
         private void TbTime_SelectionChanged(object sender, RoutedEventArgs e)
         {
             TextBox tbTime = e.Source as TextBox;
-
             tbTime.SelectionChanged -= TbTime_SelectionChanged;
-            if (tbTime.CaretIndex >= 0 && tbTime.CaretIndex < tbTime.Text.Length)
+            double mouseX = Mouse.GetPosition(tbTime).X;
+            int moveCaret = 0;
+            bool trailing;
+            int movingEdge;
+            Action drawCaret;
+
+            if (tbTime.SelectionLength == 0 && selectedChar[tbTime] != -1)
             {
+                selectedChar[tbTime] = -1;
+                selectionCaret[tbTime].Visibility = Visibility.Collapsed;
+                caret[tbTime].Visibility = Visibility.Visible;
+            }
 
-                if (tbTime.SelectionLength == 0 && tbTime.CaretIndex == prevCaretIndex[tbTime] && tbTime.CaretIndex != 0)
+            if (tbTime.SelectionLength > 0)
+            {
+                if (selectedChar[tbTime] == -1)
                 {
-                    tbTime.CaretIndex--;
-                }
-
-                if (tbTime.CaretIndex == tbTime.Text.Length)
-                {
-                    tbTime.CaretIndex--;
-                }
-                else if (tbTime.Text[tbTime.CaretIndex] == ':')
-                {
-                    if (prevCaretIndex[tbTime] > tbTime.CaretIndex)
+                    if (prevCaretIndex[tbTime] <= tbTime.CaretIndex)
                     {
-                        tbTime.CaretIndex--;
+                        trailing = true;
+                        selectedChar[tbTime] = tbTime.CaretIndex;
+                    }
+                    else // if (prevCaretIndex[tbTime] > tbTime.CaretIndex)
+                    {
+                        trailing = false;
+                        selectedChar[tbTime] = tbTime.CaretIndex + tbTime.SelectionLength - 1;
+                    }
+
+                    //movingEdge = tbTime.CaretIndex < selectedChar[tbTime] ? tbTime.CaretIndex : tbTime.CaretIndex + tbTime.SelectionLength - 1;
+                    selectionCaret[tbTime].Visibility = Visibility.Visible;
+                    caret[tbTime].Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    if (selectedChar[tbTime] != tbTime.CaretIndex && selectedChar[tbTime] != tbTime.CaretIndex + tbTime.SelectionLength - 1)
+                    {
+                        if (tbTime.CaretIndex == selectedChar[tbTime] + 1)
+                        {
+                            selectedChar[tbTime] = tbTime.CaretIndex;
+                            //movingEdge = tbTime.CaretIndex + tbTime.SelectionLength - 1;
+                            trailing = true;
+                        }
+                        else
+                        {
+                            selectedChar[tbTime] = tbTime.CaretIndex + tbTime.SelectionLength - 1;
+                            //movingEdge = tbTime.CaretIndex;
+                            trailing = false;
+                        }
                     }
                     else
                     {
-                        tbTime.CaretIndex++;
+                        //movingEdge = tbTime.CaretIndex < selectedChar[tbTime] ? tbTime.CaretIndex : tbTime.CaretIndex + tbTime.SelectionLength - 1;
+                        int carets = tbTime.CaretIndex < selectedChar[tbTime] ? tbTime.CaretIndex : tbTime.CaretIndex + tbTime.SelectionLength - 1;
+
+                        if (carets > selectedChar[tbTime])
+                        {
+                            trailing = true;
+                        }
+                        else if (carets < selectedChar[tbTime])
+                        {
+                            trailing = false;
+                        }
+                        else if (prevCaretIndex[tbTime] > selectedChar[tbTime])
+                        {
+                            trailing = true;
+                        }
+                        else // if (prevCaretIndex[tbTime] < selectedChar[tbTime])
+                        {
+                            trailing = false;
+                        }
                     }
                 }
 
-                tbTime.SelectionLength = 1;
-            }
+                if (tbTime.Text[selectedChar[tbTime]] == ':')
+                {
+                    int newSelectionLength = tbTime.SelectionLength == 1 ? 1 : tbTime.SelectionLength - 1;
 
-            if (tbTime.CaretIndex == 8)
+                    if (trailing == true)
+                    {
+                        tbTime.CaretIndex = selectedChar[tbTime] + 1;
+                    }
+                    else if (trailing == false)
+                    {
+                        tbTime.CaretIndex = selectedChar[tbTime];
+                    }
+
+                    for (int i = 0; i < newSelectionLength; i++)
+                    {
+                        if (trailing == true)
+                        {
+                            EditingCommands.SelectRightByCharacter.Execute(null, tbTime);
+                        }
+                        else if (trailing == false)
+                        {
+                            EditingCommands.SelectLeftByCharacter.Execute(null, tbTime);
+                        }
+                    }
+
+                    if (trailing == true)
+                    {
+                        selectedChar[tbTime] = tbTime.CaretIndex;
+                    }
+                    else if (trailing == false)
+                    {
+                        selectedChar[tbTime] = tbTime.CaretIndex + newSelectionLength - 1;
+                    }
+                }
+
+                movingEdge = trailing == true ? tbTime.CaretIndex + tbTime.SelectionLength - 1 : tbTime.CaretIndex;
+
+                drawCaret = () =>
+                {
+                    if (moveCaret != 0)
+                    {
+                        if (moveCaret == -1)
+                        {
+                            EditingCommands.SelectLeftByCharacter.Execute(null, tbTime);
+                        }
+                        else if (moveCaret == 1)
+                        {
+                            EditingCommands.SelectRightByCharacter.Execute(null, tbTime);
+                        }
+
+                        movingEdge = tbTime.CaretIndex < selectedChar[tbTime] ? tbTime.CaretIndex : tbTime.CaretIndex + tbTime.SelectionLength - 1;
+                    }
+
+                    DrawSelectionCaret(tbTime, trailing);
+                };
+            }
+            else
             {
-                tbTime.CaretIndex = 7;
-                tbTime.SelectionLength = 1;
+                movingEdge = tbTime.CaretIndex;
+
+                drawCaret = () =>
+                {
+                    if (moveCaret != 0)
+                    {
+                        if (moveCaret == -1)
+                        {
+                            tbTime.CaretIndex--;
+                        }
+                        else if (moveCaret == 1)
+                        {
+                            tbTime.CaretIndex++;
+                        }
+
+                        movingEdge = tbTime.CaretIndex;
+                    }
+
+                    if (selectedChar[tbTime] != -1)
+                    {
+                        selectedChar[tbTime] = -1;
+                        selectionCaret[tbTime].Visibility = Visibility.Collapsed;
+                        caret[tbTime].Visibility = Visibility.Visible;
+                    }
+                    else if (selectedChar[tbTime] == -1 && prevCaretIndex[tbTime] == 8)
+                    {
+                        selectionCaret[tbTime].Visibility = Visibility.Collapsed;
+                        caret[tbTime].Visibility = Visibility.Visible;
+                    }
+
+                    if (tbTime.CaretIndex == 8)
+                    {
+                        selectionCaret[tbTime].Visibility = Visibility.Visible;
+                        caret[tbTime].Visibility = Visibility.Collapsed;
+                        DrawSelectionCaret(tbTime, false);
+                    }
+                    else
+                    {
+                        Rect charRect = tbTime.GetRectFromCharacterIndex(tbTime.CaretIndex, false);
+                        Point rightSide = tbTime.GetRectFromCharacterIndex(tbTime.CaretIndex, true).Location;
+
+                        caret[tbTime].Width = rightSide.X - charRect.Location.X;
+                        caret[tbTime].Height = charRect.Height;
+
+                        Canvas.SetLeft(caret[tbTime], charRect.Location.X);
+                        Canvas.SetTop(caret[tbTime], charRect.Location.Y);
+                    }
+                };
             }
 
-            prevCaretIndex[tbTime] = tbTime.CaretIndex;
+            if (movingEdge != tbTime.Text.Length)
+            {
+                if (tbTime.Text[movingEdge] == ':')
+                {
+                    if (Mouse.Captured == tbTime && Mouse.LeftButton == MouseButtonState.Pressed)
+                    {
+                        if (prevMouseX < mouseX)
+                        {
+                            moveCaret = +1;
+                        }
+                        else if (prevMouseX > mouseX)
+                        {
+                            moveCaret = -1;
+                        }
+                    }
+                    else
+                    {
+                        if (prevCaretIndex[tbTime] < movingEdge)
+                        {
+                            moveCaret = +1;
+                        }
+                        else if (prevCaretIndex[tbTime] > movingEdge)
+                        {
+                            moveCaret = -1;
+                        }
+                    }
+                }
+            }
+
+            drawCaret();
+
+            prevMouseX = mouseX;
+            prevCaretIndex[tbTime] = movingEdge;
             tbTime.SelectionChanged += TbTime_SelectionChanged;
         }
+        private void TbTime_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            TextBox tbTime = sender as TextBox;
+            //double mouseX = e.GetPosition(tbTime).X;
 
-        
+            if (mouseLeftButtonSelect == true)
+            {
+                if (e.MouseDevice.Captured != tbTime)
+                {
+                    e.MouseDevice.Capture(tbTime);
+                }
+
+                int charIndex;
+                double charBaseline = tbTime.GetRectFromCharacterIndex(2).Y;
+                double minMouseX = tbTime.GetRectFromCharacterIndex(0, false).X;
+                double maxMouseX = tbTime.GetRectFromCharacterIndex(7, true).X;
+                Point mousePoint = new Point(e.GetPosition(tbTime).X, charBaseline);
+
+                if (mousePoint.X < minMouseX)
+                {
+                    charIndex = 0;
+                }
+                else if (mousePoint.X > maxMouseX)
+                {
+                    charIndex = 7;
+                }
+                else
+                {
+                    charIndex = tbTime.GetCharacterIndexFromPoint(mousePoint, true);
+                }
+
+                bool trailing;
+                Action<object, IInputElement> selectCharacter;
+                Action<object, IInputElement> selectWord;
+                int tempSelectionLength = 2 + ((selectedCount[tbTime] - 1) * 3);
+
+                if (charIndex < selectedChar[tbTime])
+                {
+                    if (tbTime.Text[selectedChar[tbTime] - 1] == ':')
+                    {
+                        selectedChar[tbTime] = tbTime.CaretIndex + tbTime.SelectionLength - 1;
+                    }
+
+                    selectCharacter = EditingCommands.SelectLeftByCharacter.Execute;
+                    selectWord = EditingCommands.SelectLeftByWord.Execute;
+                    trailing = false;
+                    tbTime.CaretIndex = selectedChar[tbTime] + 1;
+                }
+                else if (charIndex > selectedChar[tbTime])
+                {
+                    if (tbTime.Text[selectedChar[tbTime] + 1] == ':')
+                    {
+                        selectedChar[tbTime] = tbTime.CaretIndex;
+                    }
+
+                    selectCharacter = EditingCommands.SelectRightByCharacter.Execute;
+                    selectWord = EditingCommands.SelectRightByWord.Execute;
+                    trailing = true;
+                    tbTime.CaretIndex = selectedChar[tbTime];
+                }
+                else
+                {
+                    tbTime.CaretIndex = charIndex == tbTime.Text.Length - 1 ? tbTime.CaretIndex : tbTime.CaretIndex + tempSelectionLength;
+
+                    if (charIndex == tbTime.Text.Length - 1)
+                    {
+                        selectCharacter = EditingCommands.SelectRightByCharacter.Execute;
+                        selectWord = EditingCommands.SelectRightByWord.Execute;
+                    }
+                    else
+                    {
+                        selectCharacter = EditingCommands.SelectLeftByCharacter.Execute;
+                        selectWord = EditingCommands.SelectLeftByWord.Execute;
+                    }
+
+                    trailing = (charIndex == tbTime.Text.Length - 1 ? true : false);
+                }
+
+                string newString = charIndex < selectedChar[tbTime] || selectedChar[tbTime] == 7 ? new string(tbTime.Text.Reverse().ToArray()) : tbTime.Text;
+                int newCharIndex = charIndex < selectedChar[tbTime] || selectedChar[tbTime] == 7 ? tbTime.Text.Length - 1 - charIndex : charIndex;
+                int newSelectedChar = charIndex < selectedChar[tbTime] || selectedChar[tbTime] == 7 ? tbTime.Text.Length - 1 - selectedChar[tbTime] : selectedChar[tbTime];
+                int selectionCount = newString.Substring(newSelectedChar + tempSelectionLength - 1, newCharIndex - (newSelectedChar + tempSelectionLength - 1) < 0 ? 0 :
+                                    newCharIndex - (newSelectedChar + tempSelectionLength - 1)).Count(c => c == ':');
+                selectWord(null, tbTime);
+
+                for (int i = 0; i < (selectedCount[tbTime] - 1) + selectionCount; i++)
+                {
+                    selectCharacter(null, tbTime);
+                    selectWord(null, tbTime);
+                }
+
+                DrawSelectionCaret(tbTime, trailing);
+                e.Handled = true;
+                prevMouseX = e.GetPosition(tbTime).X;
+            }
+
+            //prevMouseX = e.GetPosition(tbTime).X;
+        }
+        private void TbTime_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            TextBox tbTime = sender as TextBox;
+            tbTime.SelectionChanged -= TbTime_SelectionChanged;
+
+            tbTime.CaptureMouse();
+            double charBaseline = tbTime.GetRectFromCharacterIndex(2).Y;
+            double minMouseX = tbTime.GetRectFromCharacterIndex(0, false).X;
+            double maxMouseX = tbTime.GetRectFromCharacterIndex(7, true).X;
+            Point mousePoint = new Point(e.GetPosition(tbTime).X, charBaseline);
+            int charIndex = tbTime.GetCharacterIndexFromPoint(mousePoint, false);
+
+            if (mousePoint.X < minMouseX)
+            {
+                charIndex = 0;
+            }
+            else if (mousePoint.X > maxMouseX)
+            {
+                charIndex = 7;
+            }
+            else
+            {
+                charIndex = tbTime.GetCharacterIndexFromPoint(mousePoint, true);
+            }
+
+            caret[tbTime].Visibility = Visibility.Collapsed;
+            selectionCaret[tbTime].Visibility = Visibility.Visible;
+
+            bool trailing;
+
+            if (charIndex == tbTime.Text.Length - 1 || tbTime.Text[charIndex + 1] == ':')
+            {
+                trailing = true;
+                selectedCount[tbTime] = 1;
+                selectedChar[tbTime] = charIndex - 1;
+                tbTime.CaretIndex = selectedChar[tbTime];
+                EditingCommands.SelectRightByWord.Execute(null, tbTime);
+            }
+            else if (tbTime.Text[charIndex] == ':')
+            {
+                selectedCount[tbTime] = 2;
+
+                if (charIndex < tbTime.Text.Length / 2)
+                {
+                    tbTime.CaretIndex = 0;
+                    selectedChar[tbTime] = 0;
+                    EditingCommands.SelectRightByWord.Execute(null, tbTime);
+                    EditingCommands.SelectRightByCharacter.Execute(null, tbTime);
+                    EditingCommands.SelectRightByWord.Execute(null, tbTime);
+                    trailing = true;
+                }
+                else
+                {
+                    tbTime.CaretIndex = tbTime.Text.Length;
+                    selectedChar[tbTime] = tbTime.Text.Length - 1;
+                    EditingCommands.SelectLeftByWord.Execute(null, tbTime);
+                    EditingCommands.SelectLeftByCharacter.Execute(null, tbTime);
+                    EditingCommands.SelectLeftByWord.Execute(null, tbTime);
+                    trailing = false;
+                }
+            }
+            else
+            {
+                trailing = false;
+                selectedCount[tbTime] = 1;
+                selectedChar[tbTime] = charIndex + 1;
+                tbTime.CaretIndex = selectedChar[tbTime] + 1;
+                EditingCommands.SelectLeftByWord.Execute(null, tbTime);
+            }
+
+            DrawSelectionCaret(tbTime, trailing);
+            mouseLeftButtonSelect = true;
+            e.Handled = true;
+        }
+        private void TbTime_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            TextBox tbTime = sender as TextBox;
+
+            if (mouseLeftButtonSelect)
+            {
+                e.MouseDevice.Capture(tbTime, CaptureMode.None);
+                mouseLeftButtonSelect = false;
+                e.Handled = true;
+
+                tbTime.SelectionChanged += TbTime_SelectionChanged;
+            }
+        }
+        private void TbTime_Loaded(object sender, RoutedEventArgs e)
+        {
+            TextBox tbTime = sender as TextBox;
+
+            Rect charRect;
+            Point charRightSide;
+
+            caret.Add(tbTime, VisualTreeHelper.GetChild(VisualTreeHelper.GetChild(VisualTreeHelper.GetParent(tbTime), 1), 0) as Border);
+            selectionCaret.Add(tbTime, VisualTreeHelper.GetChild(VisualTreeHelper.GetChild(VisualTreeHelper.GetParent(tbTime), 1), 1) as Border);
+            charRect = tbTime.GetRectFromCharacterIndex(2);
+            charRightSide = tbTime.GetRectFromCharacterIndex(2, true).Location;
+            selectionCaret[tbTime].Width = (charRightSide.X - charRect.Location.X) * 0.20;
+            selectionCaret[tbTime].Height = charRect.Height;
+        }
         //
         private string  getGpxFileName()
         {

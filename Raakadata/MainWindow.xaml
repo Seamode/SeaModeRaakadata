@@ -108,10 +108,82 @@
         <TextBox Grid.Column="22"  Grid.Row="7"  Text="i"  ToolTipService.InitialShowDelay="2000" ToolTipService.ShowDuration="20000" ToolTipService.BetweenShowDelay="10000" ToolTip="Chose a path to raw data files. Chose start and end date/time to merge data."  Foreground="Red" Background="#FF303030" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" BorderBrush="#FF303030" SelectionBrush="#FF303030" IsReadOnly="True" />
         <DatePicker x:Name="dpEventStartDate" Grid.Column="16" Grid.ZIndex="2"  Grid.Row="10"  Grid.ColumnSpan="3" VerticalAlignment="Center" SelectedDateChanged="DpEventDate_SelectedDateChanged" Background="#FF303030"/>
         <DatePicker x:Name="dpEventEndDate" Grid.Column="16" Grid.ZIndex="2" Grid.Row="11" Grid.ColumnSpan="3" VerticalAlignment="Center" Background="#FF303030" SelectedDateChanged="DpEventDate_SelectedDateChanged"/>
-        <TextBox x:Name="tbEventStartTime" Grid.ColumnSpan="3" Grid.Column="16" Grid.Row="13" Text="HH:mm:ss" GotFocus="TbTime_GotFocus" LostFocus="TbTime_LostFocus" Background="#FF303030" BorderBrush="#FF303030" Foreground="White" VerticalContentAlignment="Center"/>
+        <Grid x:Name="StartTimeGrid" Grid.ColumnSpan="3" Grid.Column="16" Grid.Row="13" >
+            <TextBox x:Name="tbEventStartTime" CaretBrush="Transparent" Text="HH:mm:ss" GotFocus="TbTime_GotFocus" LostFocus="TbTime_LostFocus" Background="#FF303030" BorderBrush="#FF303030" Foreground="White" VerticalContentAlignment="Center" PreviewMouseMove="TbTime_PreviewMouseMove" PreviewMouseDoubleClick="TbTime_PreviewMouseDoubleClick" PreviewMouseLeftButtonUp="TbTime_PreviewMouseLeftButtonUp" Loaded="TbTime_Loaded" FontFamily="Courier New" />
+            <Canvas>
+                <Border x:Name="EventStartTimeCaret" Visibility="Collapsed" IsHitTestVisible="False" Canvas.Left="0" Canvas.Top="0" Opacity="0.3" Background="Red">
+                    <Border.Triggers>
+                        <EventTrigger RoutedEvent="Border.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard  x:Name="EventStartTimeCaretStoryBoard" RepeatBehavior="Forever">
+                                    <ColorAnimationUsingKeyFrames Storyboard.TargetProperty="Background.Color" Duration="0:0:0:1" FillBehavior="HoldEnd">
+                                        <ColorAnimationUsingKeyFrames.KeyFrames >
+                                            <DiscreteColorKeyFrame KeyTime="0:0:0.750" Value="Transparent" />
+                                            <DiscreteColorKeyFrame KeyTime="0:0:0.000" Value="red"/>
+                                        </ColorAnimationUsingKeyFrames.KeyFrames>
+                                    </ColorAnimationUsingKeyFrames>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Border.Triggers>
+                </Border >
+                <Border x:Name="EventStartTimeSelectionCaret" Visibility="Collapsed" IsHitTestVisible="False" Canvas.Left="0" Canvas.Top="0" Opacity="1.0" Background="Blue">
+                    <Border.Triggers>
+                        <EventTrigger RoutedEvent="Border.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard x:Name="EventStartTimeSelectionCaretStoryBoard" RepeatBehavior="Forever">
+                                    <ColorAnimationUsingKeyFrames Storyboard.TargetProperty="Background.Color" Duration="0:0:0:1" FillBehavior="HoldEnd">
+                                        <ColorAnimationUsingKeyFrames.KeyFrames>
+                                            <DiscreteColorKeyFrame KeyTime="0:0:0.750" Value="Transparent"/>
+                                            <DiscreteColorKeyFrame KeyTime="0:0:0.0" Value="Blue"/>
+                                        </ColorAnimationUsingKeyFrames.KeyFrames>
+                                    </ColorAnimationUsingKeyFrames>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Border.Triggers>
+                </Border>
+            </Canvas>
+        </Grid>
         <Label Grid.Column="14" Grid.Row="13" Content="Start time:" VerticalContentAlignment="Center" Grid.ColumnSpan="2"  Foreground="White" FontSize="12" Background="#FF303030" />
         <Label Grid.Column="14" Grid.Row="14" Content="End time:"  Grid.ColumnSpan="2" VerticalContentAlignment="Center" Foreground="White" FontSize="12" Background="#FF303030"/>
-        <TextBox x:Name="tbEventEndTime" Grid.ColumnSpan="3" Grid.Column="16" Grid.Row="14" Text="HH:mm:ss" GotFocus="TbTime_GotFocus" LostFocus="TbTime_LostFocus" Background="#FF303030" BorderBrush="#FF303030" Foreground="White" VerticalContentAlignment="Center"/>
+        <Grid x:Name="EndTimeGrid" Grid.ColumnSpan="3" Grid.Column="16" Grid.Row="14">
+            <TextBox x:Name="tbEventEndTime" CaretBrush="Transparent" Text="HH:mm:ss" GotFocus="TbTime_GotFocus" LostFocus="TbTime_LostFocus" Background="#FF303030" BorderBrush="#FF303030" Foreground="White" VerticalContentAlignment="Center" PreviewMouseMove="TbTime_PreviewMouseMove" PreviewMouseDoubleClick="TbTime_PreviewMouseDoubleClick" PreviewMouseLeftButtonUp="TbTime_PreviewMouseLeftButtonUp" Loaded="TbTime_Loaded" FontFamily="Courier New" />
+            <Canvas Grid.ColumnSpan="2">
+                <Border x:Name="EventEndTimeCaret" Visibility="Collapsed" IsHitTestVisible="False" Canvas.Left="0" Canvas.Top="0" Opacity="0.3" Background="Red">
+                    <Border.Triggers>
+                        <EventTrigger RoutedEvent="Border.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard  x:Name="EventEndTimeCaretStoryBoard" RepeatBehavior="Forever">
+                                    <ColorAnimationUsingKeyFrames Storyboard.TargetProperty="Background.Color" Duration="0:0:0:1" FillBehavior="HoldEnd">
+                                        <ColorAnimationUsingKeyFrames.KeyFrames >
+                                            <DiscreteColorKeyFrame KeyTime="0:0:0.750" Value="Transparent" />
+                                            <DiscreteColorKeyFrame KeyTime="0:0:0.000" Value="red"/>
+                                        </ColorAnimationUsingKeyFrames.KeyFrames>
+                                    </ColorAnimationUsingKeyFrames>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Border.Triggers>
+                </Border >
+                <Border x:Name="EventEndTimeSelectionCaret" Visibility="Collapsed" IsHitTestVisible="False" Canvas.Left="0" Canvas.Top="0" Opacity="1.0" Background="Blue">
+                    <Border.Triggers>
+                        <EventTrigger RoutedEvent="Border.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard x:Name="EventEndTimeSelectionCaretStoryBoard" RepeatBehavior="Forever">
+                                    <ColorAnimationUsingKeyFrames Storyboard.TargetProperty="Background.Color" Duration="0:0:0:1" FillBehavior="HoldEnd">
+                                        <ColorAnimationUsingKeyFrames.KeyFrames>
+                                            <DiscreteColorKeyFrame KeyTime="0:0:0.750" Value="Transparent"/>
+                                            <DiscreteColorKeyFrame KeyTime="0:0:0.0" Value="Blue"/>
+                                        </ColorAnimationUsingKeyFrames.KeyFrames>
+                                    </ColorAnimationUsingKeyFrames>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Border.Triggers>
+                </Border>
+            </Canvas>
+        </Grid>
         <TextBox x:Name="tbEventName" Grid.ColumnSpan="5"  TextWrapping="Wrap"   Grid.Column="16"  Grid.Row="16" TextChanged="TbFile_TextChanged"  BorderBrush="#FF303030" VerticalContentAlignment="Center"/>
         <TextBlock x:Name="CopyrightTextBlock" Grid.ColumnSpan="8" Grid.Column="16"  Grid.Row="19" TextWrapping="Wrap" Text="© Oy Baltic Instruments Ab 2014" Foreground="#FFACACAC"  FlowDirection="RightToLeft" UseLayoutRounding="False" VerticalAlignment="Center" HorizontalAlignment="Right"/>
         <Border Grid.Column="1" Grid.Row="7" Grid.RowSpan="12" Background="#FF303030" BorderBrush="#FF303030" />
