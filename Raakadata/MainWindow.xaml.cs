@@ -370,12 +370,6 @@ namespace SeaMODEParcer
                 lblEventNameError.Content = "Name for file required";
                 valid = false;
             }
-            if (!string.IsNullOrWhiteSpace(tbEventName.Text) && (tbEventName.Text.EndsWith(".") || tbEventName.Text.EndsWith(" ")))
-            {
-                tbEventName.BorderBrush = Brushes.Red;
-                lblEventNameError.Content = "Name for file can not end with '.' or space";
-                valid = false;
-            }
             if (string.IsNullOrWhiteSpace(tbFolderPath.Text) || !Directory.Exists(tbFolderPath.Text))
             {
                 tbFolderPath.BorderBrush = Brushes.Red;
