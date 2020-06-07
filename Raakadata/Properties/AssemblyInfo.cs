@@ -11,7 +11,7 @@ using System.Windows;
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Raakadata")]
+[assembly: AssemblyProduct("SeaMODEParcer")]
 [assembly: AssemblyCopyright("Copyright © Baltic Instruments 2020")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
