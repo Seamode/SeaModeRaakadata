@@ -1005,7 +1005,8 @@ namespace SeaMODEParcer
         private string  getGpxFileName()
         {
             string fullFileName;
-            if(Regex.IsMatch(tbEventName.Text, ".gpx$") || Regex.IsMatch(tbEventName.Text, ".GPX$"))
+
+            if(Regex.IsMatch(tbEventName.Text, "\\.gpx$") || Regex.IsMatch(tbEventName.Text, "\\.GPX$"))
                 fullFileName = tbSavePath.Text + @"\" + tbEventName.Text;
             else
                 fullFileName = tbSavePath.Text + @"\" + tbEventName.Text + ".gpx";
