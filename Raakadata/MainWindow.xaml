@@ -96,7 +96,7 @@
                 </LinearGradientBrush>
             </Button.Background>
         </Button>
-        <Button x:Name="BtnCreateGpxFile" Grid.Column="18" Grid.Row="18" Content="Parce GPX data"  Grid.ColumnSpan="3" BorderBrush="#FF481616" Foreground="White"  FontSize="12" Click="BtnCreateGpxFile_Click" Style="{StaticResource ButtonStyleGreen}">
+        <Button x:Name="BtnCreateGpxFile" Grid.Column="18" Grid.Row="18" Content="Parce to GPX file"  Grid.ColumnSpan="3" BorderBrush="#FF481616" Foreground="White"  FontSize="12" Click="BtnCreateGpxFile_Click" Style="{StaticResource ButtonStyleGreen}">
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                     <GradientStop Color="#FF939793" Offset="0"/>
@@ -104,8 +104,8 @@
                 </LinearGradientBrush>
             </Button.Background>
         </Button>
-        <TextBox Grid.Column="0"  Grid.Row="7"  Text="i"  ToolTipService.InitialShowDelay="2000" ToolTipService.ShowDuration="20000" ToolTipService.BetweenShowDelay="10000" ToolTip="Chose outputfile location and name. Parce to raw or GPX data to chosen location."  Foreground="Red" Background="#FF303030" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="#FF303030" SelectionBrush="#FF303030" IsReadOnly="True"/>
-        <TextBox Grid.Column="22"  Grid.Row="7"  Text="i"  ToolTipService.InitialShowDelay="2000" ToolTipService.ShowDuration="20000" ToolTipService.BetweenShowDelay="10000" ToolTip="Chose a path to raw data files. Chose start and end date/time to merge data."  Foreground="Red" Background="#FF303030" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" BorderBrush="#FF303030" SelectionBrush="#FF303030" IsReadOnly="True" />
+        <TextBox Grid.Column="0"  Grid.Row="7"  Text="i"  ToolTipService.InitialShowDelay="750" ToolTipService.ShowDuration="20000" ToolTipService.BetweenShowDelay="10000" ToolTip="Chose outputfile location and name. Parce to raw or GPX data to chosen location."  Foreground="Red" Background="#FF303030" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="#FF303030" SelectionBrush="#FF303030" IsReadOnly="True"/>
+        <TextBox Grid.Column="22"  Grid.Row="7"  Text="i"  ToolTipService.InitialShowDelay="750" ToolTipService.ShowDuration="20000" ToolTipService.BetweenShowDelay="10000" ToolTip="Chose a path to raw data files. Chose start and end date/time to merge data."  Foreground="Red" Background="#FF303030" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" BorderBrush="#FF303030" SelectionBrush="#FF303030" IsReadOnly="True" />
         <DatePicker x:Name="dpEventStartDate" Grid.Column="16" Grid.ZIndex="2"  Grid.Row="10"  Grid.ColumnSpan="3" VerticalAlignment="Center" SelectedDateChanged="DpEventDate_SelectedDateChanged" Background="#FF303030"/>
         <DatePicker x:Name="dpEventEndDate" Grid.Column="16" Grid.ZIndex="2" Grid.Row="11" Grid.ColumnSpan="3" VerticalAlignment="Center" Background="#FF303030" SelectedDateChanged="DpEventDate_SelectedDateChanged"/>
         <TextBox x:Name="tbEventStartTime" Grid.ColumnSpan="3" Grid.Column="16" Grid.Row="13" Text="HH:mm:ss" GotFocus="TbTime_GotFocus" LostFocus="TbTime_LostFocus" Background="#FF303030" BorderBrush="#FF303030" Foreground="White" VerticalContentAlignment="Center"/>

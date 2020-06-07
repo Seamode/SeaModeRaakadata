@@ -40,10 +40,10 @@ namespace SeaMODEParcerLibrary
         private char separatorChar = ';'; 
 
         public string TmpFile = Path.GetTempFileName();
-        public List<GpxLine> gpxLines { get; set; }
+        public List<GpxLine> GpxLines { get; set; }
         public int DataRowCount { get; private set; } = 0;
         public List<string> DataRowErrors { get; private set; }
-        public DateTime gpxRaceTime { get; private set;}
+        public DateTime GpxRaceTime { get; private set;}
         // jotta käyttöliittymä ei lukkiudu tiedoston luku ja kirjoituksen ajaksi
         public async Task ReadAndWriteFilesAsync(string path) => await Task.Run(() => ForeachFileIn(FetchFilesToRead(path)));
 
@@ -178,7 +178,7 @@ namespace SeaMODEParcerLibrary
                 headerRows.Add(row);
         }
 
-        public void fetchGPXData(string fileName)
+        public void FetchGPXData(string fileName)
         {
             string[] separator = { ";" };
             bool validFile = true;
@@ -207,20 +207,19 @@ namespace SeaMODEParcerLibrary
                         {
                             DateTime newDateTime;
                             // Tehdään gpx instanssin luonti sekunnin välein
-                            newDateTime = formGPXTime(row);
+                            newDateTime = FormGPXTime(row);
                             TimeSpan tp = newDateTime - prevDateTime;
                             if (tp.TotalSeconds >= 1)
                             {
-                                makeGPX(row, columnCount, rowNum);
-                                prevDateTime = formGPXTime(row);
+                                MakeGPX(row, columnCount, rowNum);
+                                prevDateTime = FormGPXTime(row);
                                 // Aloitusaika otsikolle
-                                if (gpxRaceTime == DateTime.MinValue)
+                                if (GpxRaceTime == DateTime.MinValue)
                                 {
-                                    gpxRaceTime = prevDateTime;
+                                    GpxRaceTime = prevDateTime;
                                 }
                             }
                         }
-
                     }
                     else
                     {
@@ -235,49 +234,45 @@ namespace SeaMODEParcerLibrary
             }
         }
 
-        private void makeGPX(string luettuRivi, int columnCount, int rowNumber)
+        private void MakeGPX(string row, int columnCount, int rowNumber)
         {
-            if (gpxLines == null)
-                gpxLines = new List<GpxLine>();
+            if (GpxLines == null)
+                GpxLines = new List<GpxLine>();
 
-            string[] arvot = luettuRivi.Split(separatorChar);
+            string[] rowValues = row.Split(separatorChar);
             // Rivillä oltava sama määrä sarakkeita kuin otsikollakin
-            if(arvot.Length != columnCount)
+            if(rowValues.Length != columnCount)
             {
-                DataRowErrors.Add($"The number of columns {arvot.Length} in row {rowNumber} did not match to the headerline");
+                DataRowErrors.Add($"The number of columns {rowValues.Length} in row {rowNumber} did not match to the headerline");
                 return;
             }
-            DateTime aika;
+            DateTime time;
             try
             {
-                aika = DateTime.ParseExact(arvot[23] + " " + arvot[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
+                time = DateTime.ParseExact(rowValues[23] + " " + rowValues[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
             }
-            catch (System.IndexOutOfRangeException e)
+            catch (IndexOutOfRangeException)
             {
                 DataRowErrors.Add($"Parsing time at row {rowNumber} failed"); 
                 return;
             }
-            // Tarkistetaan longitue ja latitude
-            Boolean isCorrect = true;
-            if(!Regex.IsMatch(arvot[25], ConfigurationManager.AppSettings["patLatitude"]))
+            if(!Regex.IsMatch(rowValues[25], ConfigurationManager.AppSettings["patLatitude"]))
             {
                 DataRowErrors.Add($"Latitude at {rowNumber} empty or not in correct format");
-                isCorrect = false;
             }
-            if (!Regex.IsMatch(arvot[27], ConfigurationManager.AppSettings["patLongitude"]))
+            if (!Regex.IsMatch(rowValues[27], ConfigurationManager.AppSettings["patLongitude"]))
             {
                 DataRowErrors.Add($"Longitude at {rowNumber} empty or not in correct format");
-                isCorrect = false;
             }
             //GpxLine gpxLine = new GpxLine(aika, arvot[25], arvot[27], arvot[29]);  
             // Tarkistetaan latitude ja longitude
-            GpxLine gpxLine = new GpxLine(aika);
+            GpxLine gpxLine = new GpxLine(time);
 
-            gpxLine.setLatitude(arvot[25]);
-            gpxLine.latPosition = arvot[26];
-            gpxLine.setLongitude(arvot[27]);
-            gpxLine.longPosition = arvot[28];
-            gpxLines.Add(gpxLine);
+            gpxLine.SetLatitude(rowValues[25]);
+            gpxLine.LatPosition = rowValues[26];
+            gpxLine.SetLongitude(rowValues[27]);
+            gpxLine.LongPosition = rowValues[28];
+            GpxLines.Add(gpxLine);
         }
 
         private bool TimeValidation(string[] values)
@@ -312,7 +307,7 @@ namespace SeaMODEParcerLibrary
                 return false;
         }
 
-        private DateTime formGPXTime(string luettuRivi)
+        private DateTime FormGPXTime(string luettuRivi)
         {
             // Väärä erotinmerkki
             string[] values = luettuRivi.Split(separatorChar);
@@ -321,7 +316,7 @@ namespace SeaMODEParcerLibrary
             {
                 time = DateTime.ParseExact(values[23] + " " + values[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
             }
-            catch (System.IndexOutOfRangeException e)
+            catch (IndexOutOfRangeException)
             {
                 // Laitetaan ajalle jokin outo arvo, jos rikkinäinen data
                 time = DateTime.MinValue;

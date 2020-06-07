@@ -247,7 +247,8 @@ namespace SeaMODEParcer
                 if (res == MessageBoxResult.No)
                     return;
                 chosenFile = openFile.FileName;
-            } else
+            }
+            else
             {
                 return;
             }
@@ -271,19 +272,19 @@ namespace SeaMODEParcer
             Cursor = Cursors.Wait;
             ForceCursor = true;
 
-            await Task.Run(() => sr.fetchGPXData(chosenFile));
+            await Task.Run(() => sr.FetchGPXData(chosenFile));
             //sr.haeGpxData(chosenFile);
 
             // Kursorin palautus.
             Cursor = tempCursor;
             ForceCursor = false;
 
-            if (sr.gpxLines != null && sr.gpxLines.Count > 0)
+            if (sr.GpxLines != null && sr.GpxLines.Count > 0)
             {
                 // Tehdään funktio joka hakee riviltä noin 14 aloituspäivän
-                string saveGpxFile = getGpxFileName();
-                SeamodeGpxWriter gpxWriter = new SeamodeGpxWriter(sr.gpxRaceTime);
-                gpxWriter.writeGpx(sr.gpxLines, saveGpxFile);
+                string saveGpxFile = GetGpxFileName();
+                SeamodeGpxWriter gpxWriter = new SeamodeGpxWriter(sr.GpxRaceTime);
+                gpxWriter.WriteGpx(sr.GpxLines, saveGpxFile);
                 var res = MessageBox.Show($"File {saveGpxFile} was created.\nWould you like open the folder?", "File created.", MessageBoxButton.YesNo);
                 // avaa File Explorerin
                 if (res == MessageBoxResult.Yes)
@@ -316,7 +317,7 @@ namespace SeaMODEParcer
             Cursor tempCursor = Cursor;
             Cursor = Cursors.Wait;
             ForceCursor = true;
-            await Task.Run(() => sw.Kirjoita(arrayListErrors));
+            await Task.Run(() => sw.WriteFile(arrayListErrors));
             Cursor = tempCursor;
             ForceCursor = false;
             var res = MessageBox.Show("Would you like open errorLog folder", $"Errors written to file{sw.OutFile}", MessageBoxButton.YesNo);
@@ -665,7 +666,7 @@ namespace SeaMODEParcer
                 if (item is string filename)
                 {
                     string p = $"{tbFolderPath.Text}\\{filename}";
-                    await Task.Run(() => sr.fetchGPXData(p));
+                    await Task.Run(() => sr.FetchGPXData(p));
                 }
             }
 
@@ -683,7 +684,7 @@ namespace SeaMODEParcer
                 ForceCursor = false;
                 return;
             }
-            if (sr.gpxLines == null || sr.gpxLines.Count == 0)
+            if (sr.GpxLines == null || sr.GpxLines.Count == 0)
             {
                 // Kursorin palautus.
                 Cursor = tempCursor;
@@ -694,9 +695,9 @@ namespace SeaMODEParcer
                 return;
             }
 
-            SeamodeGpxWriter wr = new SeamodeGpxWriter(sr.gpxRaceTime);
-            string saveGpxFile = getGpxFileName();
-            await Task.Run(() => wr.writeGpx(sr.gpxLines, saveGpxFile));
+            SeamodeGpxWriter wr = new SeamodeGpxWriter(sr.GpxRaceTime);
+            string saveGpxFile = GetGpxFileName();
+            await Task.Run(() => wr.WriteGpx(sr.GpxLines, saveGpxFile));
 
             Cursor = tempCursor;
             ForceCursor = false;
@@ -838,7 +839,7 @@ namespace SeaMODEParcer
                         tbFilesInFolder.Items.Add(fileList[i]);
                     }
                 }
-                catch (EndOfStreamException e)
+                catch (EndOfStreamException)
                 {
                     if (minDTs.Count > maxDTs.Count)
                     {
@@ -850,7 +851,7 @@ namespace SeaMODEParcer
                         Console.Error.WriteLine($"Error: no usable data found in file '{fileList[i]}'");
                     }
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     if (minDTs.Count > maxDTs.Count)
                     {
@@ -1018,11 +1019,11 @@ namespace SeaMODEParcer
 
         
         //
-        private string  getGpxFileName()
+        private string  GetGpxFileName()
         {
             string fullFileName;
 
-            if(Regex.IsMatch(tbEventName.Text, "\\.gpx$") || Regex.IsMatch(tbEventName.Text, "\\.GPX$"))
+            if (Regex.IsMatch(tbEventName.Text, "\\.gpx$") || Regex.IsMatch(tbEventName.Text, "\\.GPX$"))
                 fullFileName = tbSavePath.Text + @"\" + tbEventName.Text;
             else
                 fullFileName = tbSavePath.Text + @"\" + tbEventName.Text + ".gpx";

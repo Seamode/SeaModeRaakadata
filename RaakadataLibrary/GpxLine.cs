@@ -10,17 +10,17 @@ namespace SeaMODEParcerLibrary
     {
         public GpxLine(DateTime aika)
         {
-            this.eventTime = aika;
+            EventTime = aika;
         }
 
-        public DateTime eventTime { get; set; }
-        public string latitude { get; set; }
-        public string longitude { get; set; }
-        public double speed { get; set; }
-        public string latPosition { get; set; }
-        public string longPosition { get; set; }
+        public DateTime EventTime { get; set; }
+        public string Latitude { get; set; }
+        public string Longitude { get; set; }
+        public double Speed { get; set; }
+        public string LatPosition { get; set; }
+        public string LongPosition { get; set; }
 
-        public void setLongitude(string longitudeIn)
+        public void SetLongitude(string longitudeIn)
         {
             // Poistetaan etunolla ja siirretään  pilkku toisen merkitsevän numeron jälkeen
             if (Regex.IsMatch(longitudeIn, "^0")) {
@@ -39,40 +39,41 @@ namespace SeaMODEParcerLibrary
             if (Regex.IsMatch(longitudeIn, "^[0-6][0-9][0-9].*"))
             {
                 longitudeIn = longitudeIn.Insert(2, ".");
-                this.longitude = laskeMinuutit(longitudeIn);
+                Longitude = CalculateMinutes(longitudeIn);
             }
 
         }
-        public void setLatitude(string latitudeIn)
+        public void SetLatitude(string latitudeIn)
         {
             if (Regex.IsMatch(latitudeIn, "^[0-9][0-9][0-9][0-9][.]"))
             {
                 latitudeIn = latitudeIn.Replace(".", "");
                 latitudeIn = latitudeIn.Insert(2, ".");
-                this.latitude = laskeMinuutit(latitudeIn);
+                Latitude = CalculateMinutes(latitudeIn);
             }
             if (Regex.IsMatch(latitudeIn, "^[0-9][0-9][0-9][0-9][,]*"))
             {
                 latitudeIn = latitudeIn.Replace(",", "");
                 latitudeIn = latitudeIn.Insert(2, ".");
-                this.latitude = laskeMinuutit(latitudeIn);
+                Latitude = CalculateMinutes(latitudeIn);
             }
         }
-        private string laskeMinuutit(string s)
+        private string CalculateMinutes(string s)
         {
-            NumberFormatInfo provider = new NumberFormatInfo();
-            provider.NumberDecimalSeparator = ".";
-            string[] seperator = { "." };
+            NumberFormatInfo provider = new NumberFormatInfo
+            {
+                NumberDecimalSeparator = "."
+            };
             string[] a = s.Split('.');
             if (a.Length < 2) return null;
             string a2 = a[1].Insert(2, ".");
             double d;
-            int aste = 0;
+            int aste;
             try
             {
-                d = Double.Parse(a2, provider);
+                d = double.Parse(a2, provider);
                 aste = Convert.ToInt32(a[0]);
-            } catch(Exception e)
+            } catch (Exception)
             {
                 return null;
             }
