@@ -37,6 +37,8 @@ namespace SeaMODEParcer
         Dictionary<TextBox, int> prevCaretIndex = new Dictionary<TextBox, int>();
         Dictionary<TextBox, string> prevText = new Dictionary<TextBox, string>();
         private readonly string timePlacehoder = "HH:mm:ss";
+        private readonly char[] forbiddenCharsInFilename = { '<', '>', ':', '"', '\\', '/', '|', '?', '*' };
+
         public MainWindow()
         {
             InitializeComponent();
@@ -55,7 +57,7 @@ namespace SeaMODEParcer
             string defaultPath = FindDatDirectory();
             tbFolderPath.Text = defaultPath;
             tbSavePath.Text = defaultPath;
-            if (!string.IsNullOrEmpty(defaultPath))
+            if (!string.IsNullOrWhiteSpace(defaultPath))
                 ListFilesInFolder();
         }
 
@@ -362,19 +364,25 @@ namespace SeaMODEParcer
                 lblEventEndTimeError.Content = "Time required";
                 valid = false;
             }
-            if (string.IsNullOrEmpty(tbEventName.Text))
+            if (string.IsNullOrWhiteSpace(tbEventName.Text))
             {
                 tbEventName.BorderBrush = Brushes.Red;
                 lblEventNameError.Content = "Name for file required";
                 valid = false;
             }
-            if (string.IsNullOrEmpty(tbFolderPath.Text) || !Directory.Exists(tbFolderPath.Text))
+            if (!string.IsNullOrWhiteSpace(tbEventName.Text) && (tbEventName.Text.EndsWith(".") || tbEventName.Text.EndsWith(" ")))
+            {
+                tbEventName.BorderBrush = Brushes.Red;
+                lblEventNameError.Content = "Name for file can not end with '.' or space";
+                valid = false;
+            }
+            if (string.IsNullOrWhiteSpace(tbFolderPath.Text) || !Directory.Exists(tbFolderPath.Text))
             {
                 tbFolderPath.BorderBrush = Brushes.Red;
                 lblFolderPathError.Content = "Valid folder path required";
                 valid = false;
             }
-            if (string.IsNullOrEmpty(tbSavePath.Text) || !Directory.Exists(tbSavePath.Text))
+            if (string.IsNullOrWhiteSpace(tbSavePath.Text) || !Directory.Exists(tbSavePath.Text))
             {
                 tbSavePath.BorderBrush = Brushes.Red;
                 lblSavePathError.Content = "Valid folder path required";
@@ -430,7 +438,21 @@ namespace SeaMODEParcer
             else if (tbFile == tbSavePath)
                 lblSavePathError.ClearValue(ContentProperty);
             else if (tbFile == tbEventName)
-                lblEventNameError.ClearValue(ContentProperty);
+            {
+                foreach (char letter in tbFile.Text)
+                {
+                    if (forbiddenCharsInFilename.Contains(letter))
+                    {
+                        tbFile.Text = tbFile.Text.Replace(letter.ToString(), string.Empty);
+                        lblEventNameError.Content = $"Forbidden characters in filename: {string.Join(" ,", forbiddenCharsInFilename)}";
+                        tbFile.CaretIndex = tbFile.Text.Length;
+                    }
+                    else
+                    {
+                        lblEventNameError.ClearValue(ContentProperty);
+                    }
+                }
+            }
         }
 
         private void TbTime_TextChanged(object sender, TextChangedEventArgs e)
