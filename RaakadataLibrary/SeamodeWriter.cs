@@ -4,17 +4,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace RaakadataLibrary
+namespace SeaMODEParcerLibrary
 {
     // Kirjoitetaan valikoidut rivit yhdistelmätiedostoon.
     public class SeamodeWriter
     { 
         
         public string OutFile { get; set; }
-        public bool Kirjoita(ArrayList rivit)
+        public bool WriteFile(ArrayList rows)
         {
-            string[] asArr = new string[rivit.Count];
-            rivit.CopyTo(asArr);
+            string[] asArr = new string[rows.Count];
+            rows.CopyTo(asArr);
             File.WriteAllLines(OutFile, asArr);
             return true;
         }

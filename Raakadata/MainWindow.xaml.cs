@@ -1,4 +1,4 @@
-﻿using RaakadataLibrary;
+﻿using SeaMODEParcerLibrary;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -26,7 +26,7 @@ using System.Collections;
 using System.Linq.Expressions;
 using System.Windows.Media.Animation;
 
-namespace Raakadata
+namespace SeaMODEParcer
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -54,6 +54,7 @@ namespace Raakadata
             public int AddedLength;
             public int RemovedLength;
         }
+        private readonly char[] forbiddenCharsInFilename = { '<', '>', ':', '"', '\\', '/', '|', '?', '*' };
         public MainWindow()
         {
             InitializeComponent();
@@ -67,11 +68,8 @@ namespace Raakadata
             string defaultPath = FindDatDirectory();
             tbFolderPath.Text = defaultPath;
             tbSavePath.Text = defaultPath;
-            if (!string.IsNullOrEmpty(defaultPath))
+            if (!string.IsNullOrWhiteSpace(defaultPath))
                 ListFilesInFolder();
-            // jotta tiedostot on helppo valita testausta varten.
-            dpEventStartDate.DisplayDate = new DateTime(2019, 09, 28);
-            dpEventEndDate.DisplayDate = new DateTime(2019, 09, 28);
         }
         private void Cut(object sender)
         {
@@ -350,11 +348,8 @@ namespace Raakadata
         {
             if (Directory.Exists(ConfigurationManager.AppSettings["fileDirectory"]))
                 return ConfigurationManager.AppSettings["fileDirectory"];
-            //string altPath = Directory.GetParent(Assembly.GetExecutingAssembly().Location).ToString();
-            //string altPath = System.IO.Path.GetDirectoryName(Environment.GetCommandLineArgs()[0]);
             string altPath = System.IO.Path.GetDirectoryName(
                 System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
-            // ylempi pitäisi palauttaa prg, alla se vaihdetaan dat
             altPath = $"{altPath.Substring(0, altPath.LastIndexOf(System.IO.Path.DirectorySeparatorChar) + 1)}dat";
             if (Directory.Exists(altPath))
                 return altPath;
@@ -365,7 +360,7 @@ namespace Raakadata
         {
             if (tbFilesInFolder.Items.Count > 1)
             {
-                tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+                tbFilesInFolder.SelectionChanged -= TbFilesInFolder_SelectionChanged;
                 cbSelectAll.Unchecked -= ListBox_UnselectAll;
                 cbSelectAll.IsChecked = false;
                 tbFilesInFolder.UnselectAll();
@@ -392,7 +387,7 @@ namespace Raakadata
                 cbSelectAll.IsEnabled = false;
 
                 cbSelectAll.Unchecked += ListBox_UnselectAll;
-                tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+                tbFilesInFolder.SelectionChanged += TbFilesInFolder_SelectionChanged;
             }
 
             List<String> fileList = SeamodeReader.FetchFilesToList(tbFolderPath.Text);
@@ -489,14 +484,12 @@ namespace Raakadata
             // Ilmoitus luonnista ja mahdolliset virheet.
             StringBuilder msg = new StringBuilder();
             msg.AppendLine($"File {fullFilePath} was created.");
-            if (!sr.PastEnd)
-                msg.AppendLine("Data logging ended before the specified endpoint.");
             foreach (string line in sr.DataRowErrors)
             {
                 msg.AppendLine(line);
             }
             msg.AppendLine("Would you like to open the folder?");
-            var res = MessageBox.Show(msg.ToString(), "File Created.", MessageBoxButton.YesNo);
+            var res = MessageBox.Show(msg.ToString(), "File created.", MessageBoxButton.YesNo);
             // avaa File Explorerin
             if (res == MessageBoxResult.Yes)
                 System.Diagnostics.Process.Start(tbSavePath.Text);
@@ -507,33 +500,38 @@ namespace Raakadata
             ListFilesInFolder();
         }
       
-        private async void btnMakeGpxFile_Click(object sender, RoutedEventArgs e)
+        private async void BtnMakeGpxFile_Click(object sender, RoutedEventArgs e)
         {
-
-            if (tbSavePath.Text == "")
+            bool canMakeFile = true;
+            if (string.IsNullOrWhiteSpace(tbSavePath.Text) || !Directory.Exists(tbSavePath.Text))
             {
-                MessageBox.Show("Parse to must be filled");
+                tbSavePath.BorderBrush = Brushes.Red;
+                lblSavePathError.Content = "Valid folder path required";
                 tbSavePath.Focus();
-                return;
+                canMakeFile = false;
             }
-            if (tbEventName.Text == "")
+            if (string.IsNullOrWhiteSpace(tbEventName.Text))
             {
-                MessageBox.Show("Output file must be filled");
+                tbEventName.BorderBrush = Brushes.Red;
+                lblEventNameError.Content = "Name for file required";
                 tbEventName.Focus();
+                canMakeFile = false;
+            }
+            if (!canMakeFile)
+            {
                 return;
             }
-
             string chosenFile = null;
             OpenFileDialog openFile = new OpenFileDialog() { Filter = "csv file (*.csv)|*.csv" };
             if (openFile.ShowDialog() == true)
             {
-                var res = MessageBox.Show("Are you sure", $"make GPX file from {openFile.FileName}", MessageBoxButton.YesNo);
+                var res = MessageBox.Show($"Are you sure you want to create a GPX file from:\n{openFile.FileName}?", "Make GPX file.", MessageBoxButton.YesNo);
                 if (res == MessageBoxResult.No)
                     return;
                 chosenFile = openFile.FileName;
-            } else
+            }
+            else
             {
-                MessageBox.Show("No file chosen");
                 return;
             }
 
@@ -556,20 +554,20 @@ namespace Raakadata
             Cursor = Cursors.Wait;
             ForceCursor = true;
 
-            await Task.Run(() => sr.haeGpxData(chosenFile));
+            await Task.Run(() => sr.FetchGPXData(chosenFile));
             //sr.haeGpxData(chosenFile);
 
             // Kursorin palautus.
             Cursor = tempCursor;
             ForceCursor = false;
 
-            if (sr.gpxLines != null && sr.gpxLines.Count > 0)
+            if (sr.GpxLines != null && sr.GpxLines.Count > 0)
             {
                 // Tehdään funktio joka hakee riviltä noin 14 aloituspäivän
-                string saveGpxFile = getGpxFileName();
-                SeamodeGpxWriter gpxWriter = new SeamodeGpxWriter(sr.gpxRaceTime);
-                gpxWriter.writeGpx(sr.gpxLines, saveGpxFile);
-                var res = MessageBox.Show("Would you like open file  folder", $"File {saveGpxFile} was created", MessageBoxButton.YesNo);
+                string saveGpxFile = GetGpxFileName();
+                SeamodeGpxWriter gpxWriter = new SeamodeGpxWriter(sr.GpxRaceTime);
+                gpxWriter.WriteGpx(sr.GpxLines, saveGpxFile);
+                var res = MessageBox.Show($"File {saveGpxFile} was created.\nWould you like open the folder?", "File created.", MessageBoxButton.YesNo);
                 // avaa File Explorerin
                 if (res == MessageBoxResult.Yes)
                     System.Diagnostics.Process.Start(tbSavePath.Text);
@@ -582,22 +580,26 @@ namespace Raakadata
                     msg.Append($"There were {sr.DataRowErrors.Count} errors on the file");
                     msg.Append("The first errorline is: ");
                     msg.Append(sr.DataRowErrors[0]);
-                    var res = MessageBox.Show("Would you like to create error log file", msg.ToString(), MessageBoxButton.YesNo);
+                    var res = MessageBox.Show($"{msg}\nWould you like to create error log file?", "Errors found in file", MessageBoxButton.YesNo);
                     if (res == MessageBoxResult.Yes)
                         CreateErrorLog(sr.DataRowErrors);
         
                 }
             }
+            ResetUI();
+            ListFilesInFolder();
         }
         private async void CreateErrorLog(List<string> errors)
         {
-            SeamodeWriter sw = new SeamodeWriter();
-            sw.OutFile = tbSavePath.Text + @"/" + "errorGpxParse.log";
+            SeamodeWriter sw = new SeamodeWriter
+            {
+                OutFile = tbSavePath.Text + @"\" + "errorGpxParse.log"
+            };
             ArrayList arrayListErrors = new ArrayList(errors);
             Cursor tempCursor = Cursor;
             Cursor = Cursors.Wait;
             ForceCursor = true;
-            await Task.Run(() => sw.Kirjoita(arrayListErrors));
+            await Task.Run(() => sw.WriteFile(arrayListErrors));
             Cursor = tempCursor;
             ForceCursor = false;
             var res = MessageBox.Show("Would you like open errorLog folder", $"Errors written to file{sw.OutFile}", MessageBoxButton.YesNo);
@@ -645,19 +647,19 @@ namespace Raakadata
                 lblEventEndTimeError.Content = "Time required";
                 valid = false;
             }
-            if (string.IsNullOrEmpty(tbEventName.Text))
+            if (string.IsNullOrWhiteSpace(tbEventName.Text))
             {
                 tbEventName.BorderBrush = Brushes.Red;
                 lblEventNameError.Content = "Name for file required";
                 valid = false;
             }
-            if (string.IsNullOrEmpty(tbFolderPath.Text) || !Directory.Exists(tbFolderPath.Text))
+            if (string.IsNullOrWhiteSpace(tbFolderPath.Text) || !Directory.Exists(tbFolderPath.Text))
             {
                 tbFolderPath.BorderBrush = Brushes.Red;
                 lblFolderPathError.Content = "Valid folder path required";
                 valid = false;
             }
-            if (string.IsNullOrEmpty(tbSavePath.Text) || !Directory.Exists(tbSavePath.Text))
+            if (string.IsNullOrWhiteSpace(tbSavePath.Text) || !Directory.Exists(tbSavePath.Text))
             {
                 tbSavePath.BorderBrush = Brushes.Red;
                 lblSavePathError.Content = "Valid folder path required";
@@ -669,9 +671,9 @@ namespace Raakadata
         private void ResetUI()
         {
             dpEventStartDate.SelectedDate = null;
-            //dpEventStartDate.DisplayDate = DateTime.Today;
+            dpEventStartDate.DisplayDate = DateTime.Today;
             dpEventEndDate.SelectedDate = null;
-            //dpEventEndDate.DisplayDate = DateTime.Today;
+            dpEventEndDate.DisplayDate = DateTime.Today;
             tbEventStartTime.TextChanged -= TbTime_TextChanged;
             tbEventEndTime.TextChanged -= TbTime_TextChanged;
             tbEventStartTime.Text = timePlacehoder;
@@ -713,7 +715,21 @@ namespace Raakadata
             else if (tbFile == tbSavePath)
                 lblSavePathError.ClearValue(ContentProperty);
             else if (tbFile == tbEventName)
-                lblEventNameError.ClearValue(ContentProperty);
+            {
+                foreach (char letter in tbFile.Text)
+                {
+                    if (forbiddenCharsInFilename.Contains(letter))
+                    {
+                        tbFile.Text = tbFile.Text.Replace(letter.ToString(), string.Empty);
+                        lblEventNameError.Content = $"Forbidden characters in filename: {string.Join(" ,", forbiddenCharsInFilename)}";
+                        tbFile.CaretIndex = tbFile.Text.Length;
+                    }
+                    else
+                    {
+                        lblEventNameError.ClearValue(ContentProperty);
+                    }
+                }
+            }
         }
         private void TextChanged(TextBox tbTime, List<TxtChange> changes)
         {
@@ -1013,10 +1029,10 @@ namespace Raakadata
 
             foreach (var item in tbFilesInFolder.SelectedItems)
             {
-                if (item is string)
+                if (item is string filename)
                 {
-                    string p = $"{tbFolderPath.Text}\\{(string)item}";
-                    await Task.Run(() => sr.haeGpxData(p));
+                    string p = $"{tbFolderPath.Text}\\{filename}";
+                    await Task.Run(() => sr.FetchGPXData(p));
                 }
             }
 
@@ -1027,14 +1043,14 @@ namespace Raakadata
                 msg2.Append($"There were {sr.DataRowErrors.Count} errors on the file");
                 msg2.Append("The first errorline is: ");
                 msg2.Append(sr.DataRowErrors[0]);
-                var res2 = MessageBox.Show("Would you like to create error log file", msg2.ToString(), MessageBoxButton.YesNo);
+                var res2 = MessageBox.Show($"{msg2}\nWould you like to create error log file?", "Errors found in file", MessageBoxButton.YesNo);
                 if (res2 == MessageBoxResult.Yes)
                     CreateErrorLog(sr.DataRowErrors);
                 Cursor = tempCursor;
                 ForceCursor = false;
                 return;
             }
-            if (sr.gpxLines == null || sr.gpxLines.Count == 0)
+            if (sr.GpxLines == null || sr.GpxLines.Count == 0)
             {
                 // Kursorin palautus.
                 Cursor = tempCursor;
@@ -1045,18 +1061,16 @@ namespace Raakadata
                 return;
             }
 
-            SeamodeGpxWriter wr = new SeamodeGpxWriter(sr.gpxRaceTime);
-            //string fullFilePath = $"{tbSavePath.Text}\\SeaMODE_{dpEventStartDate.SelectedDate}_{string.Join("", tbEventStartTime.Text.Split(':', '.'))}_{tbEventName.Text}.GPX";
-            string saveGpxFile = getGpxFileName();
-            await Task.Run(() => wr.writeGpx(sr.gpxLines, saveGpxFile));
+            SeamodeGpxWriter wr = new SeamodeGpxWriter(sr.GpxRaceTime);
+            string saveGpxFile = GetGpxFileName();
+            await Task.Run(() => wr.WriteGpx(sr.GpxLines, saveGpxFile));
 
             Cursor = tempCursor;
             ForceCursor = false;
 
             StringBuilder msg = new StringBuilder();
             msg.AppendLine($"File {saveGpxFile} was created.");
-            //if (!sr.PastEnd)
-            //    msg.AppendLine("Data logging ended before the specified endpoint.");
+            
             foreach (string line in sr.DataRowErrors)
             {
                 msg.AppendLine(line);
@@ -1075,17 +1089,17 @@ namespace Raakadata
 
         void PickDateTimes(List<string> fileList)
         {
-            Func<FileStream, int> readByte = (fs) => 
+            int readByte(FileStream fs)
             {
-            int charValue = fs.ReadByte();
+                int charValue = fs.ReadByte();
 
-            if (charValue == -1)
-            {
+                if (charValue == -1)
+                {
                     throw new EndOfStreamException();
+                }
+
+                return charValue;
             }
-            
-            return charValue;
-            };
 
             for (int i = 0; i < fileList.Count; i++)
             {
@@ -1258,7 +1272,7 @@ namespace Raakadata
                 tbEventStartTime.SelectionChanged -= TbTime_SelectionChanged;
                 tbEventEndTime.SelectionChanged -= TbTime_SelectionChanged;
 
-                tbEventStartTime.Text = $"{minDate.ToString("HH':'mm':'ss")}";
+                tbEventStartTime.Text = $"{minDate:HH':'mm':'ss}";
                 if (isModified[tbEventStartTime] != false)
                 {
                     undoHistory[tbEventStartTime].Push(prevText[tbEventStartTime] == "HH:mm:ss" ? "  :  :  " : prevText[tbEventStartTime]);
@@ -1266,7 +1280,7 @@ namespace Raakadata
                 }
                 prevText[tbEventStartTime] = tbEventStartTime.Text;
 
-                tbEventEndTime.Text = $"{maxDate.ToString("HH':'mm':'ss")}";
+                tbEventEndTime.Text = $"{maxDate:HH':'mm':'ss}";
                 if (isModified[tbEventEndTime] != false)
                 {
                     undoHistory[tbEventEndTime].Push(prevText[tbEventEndTime] == "HH:mm:ss" ? "  :  :  " : prevText[tbEventEndTime]);
@@ -1301,7 +1315,7 @@ namespace Raakadata
             }
         }
 
-        private void tbFilesInFolder_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void TbFilesInFolder_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (e.RemovedItems.Contains(lbiCheckBox))
             {
@@ -1317,9 +1331,9 @@ namespace Raakadata
                 cbSelectAll.IsChecked = false;
                 cbSelectAll.Unchecked += ListBox_UnselectAll;
 
-                tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+                tbFilesInFolder.SelectionChanged -= TbFilesInFolder_SelectionChanged;
                 lbiCheckBox.IsSelected = false;
-                tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+                tbFilesInFolder.SelectionChanged += TbFilesInFolder_SelectionChanged;
                 UpdateDateTime();
             }
             else if (!lbiCheckBox.IsSelected && tbFilesInFolder.SelectedItems.Count == tbFilesInFolder.Items.Count - 1)
@@ -1335,18 +1349,18 @@ namespace Raakadata
 
         private void ListBox_SelectAll(object sender, RoutedEventArgs e)
         {
-            tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+            tbFilesInFolder.SelectionChanged -= TbFilesInFolder_SelectionChanged;
             tbFilesInFolder.SelectAll();
             UpdateDateTime();
-            tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+            tbFilesInFolder.SelectionChanged += TbFilesInFolder_SelectionChanged;
         }
 
         private void ListBox_UnselectAll(object sender, RoutedEventArgs e)
         {
-            tbFilesInFolder.SelectionChanged -= tbFilesInFolder_SelectionChanged;
+            tbFilesInFolder.SelectionChanged -= TbFilesInFolder_SelectionChanged;
             tbFilesInFolder.UnselectAll();
             UpdateDateTime();
-            tbFilesInFolder.SelectionChanged += tbFilesInFolder_SelectionChanged;
+            tbFilesInFolder.SelectionChanged += TbFilesInFolder_SelectionChanged;
         }
         private void DrawSelectionCaret(TextBox tbTime, bool trailing)
         {
@@ -1894,13 +1908,14 @@ namespace Raakadata
             }
         }
         //
-        private string  getGpxFileName()
+        private string  GetGpxFileName()
         {
             string fullFileName;
-            if(Regex.IsMatch(tbEventName.Text, ".gpx$") || Regex.IsMatch(tbEventName.Text, ".GPX$"))
-                fullFileName = tbSavePath.Text + @"/" + tbEventName.Text;
+
+            if (Regex.IsMatch(tbEventName.Text, "\\.gpx$") || Regex.IsMatch(tbEventName.Text, "\\.GPX$"))
+                fullFileName = tbSavePath.Text + @"\" + tbEventName.Text;
             else
-                fullFileName = tbSavePath.Text + @"/" + tbEventName.Text + ".gpx";
+                fullFileName = tbSavePath.Text + @"\" + tbEventName.Text + ".gpx";
 
             return fullFileName;
         }

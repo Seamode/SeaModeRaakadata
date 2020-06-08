@@ -5,13 +5,13 @@ using System.Globalization;
 using System.Text;
 using System.Xml;
 
-namespace RaakadataLibrary
+namespace SeaMODEParcerLibrary
 {
     public class SeamodeGpxWriter
     {
-        private XmlDocument doc;
-        private XmlNode rootNode;
-        private DateTime metaDataRaceTime;
+        private readonly XmlDocument doc;
+        private readonly XmlNode rootNode;
+        private readonly DateTime metaDataRaceTime;
 
 
         public SeamodeGpxWriter(DateTime raceTime)
@@ -28,35 +28,34 @@ namespace RaakadataLibrary
 
             metaDataRaceTime = raceTime;
         }
-        public void writeGpx(List<GpxLine> gpxRivit, string path)
+        public void WriteGpx(List<GpxLine> gpxLines, string path)
         {
-            CultureInfo cultureInfo = new CultureInfo("fi-FI");
-            writeHeader();
-            writeMetaData();
+            WriteHeader();
+            WriteMetaData();
             // Kirjoitetaan rivit
             XmlNode trk = doc.CreateElement("trk");
             XmlNode trkseq = doc.CreateElement("trkseg");
-            foreach (GpxLine gpxLine in gpxRivit)
+            foreach (GpxLine gpxLine in gpxLines)
             {
                 XmlNode trkpt = doc.CreateElement("trkpt");
                 XmlAttribute attrLat = doc.CreateAttribute("lat");
                 XmlAttribute attrLon = doc.CreateAttribute("lon");
                 // Jos eteläisellä pallonpuoliskolla miinusmerkki eteen
-                if(gpxLine.latPosition == "S")
-                    attrLat.Value = "-" + gpxLine.latitude;
+                if(gpxLine.LatPosition == "S")
+                    attrLat.Value = "-" + gpxLine.Latitude;
                 else
-                    attrLat.Value = gpxLine.latitude;
+                    attrLat.Value = gpxLine.Latitude;
                 // Jos läntisella pallonpuoliskolla miinusmerkki eteen
-                if(gpxLine.longPosition == "W")
-                    attrLon.Value = ($"-{gpxLine.longitude}");
+                if(gpxLine.LongPosition == "W")
+                    attrLon.Value = ($"-{gpxLine.Longitude}");
                 else
-                    attrLon.Value = gpxLine.longitude;
+                    attrLon.Value = gpxLine.Longitude;
 
                 trkpt.Attributes.Append(attrLat);
                 trkpt.Attributes.Append(attrLon);
                 XmlNode time = doc.CreateElement("time");
                 // Tämä toisenlaisella muotoilulla
-                time.InnerText = gpxLine.eventTime.ToString("s") + "Z";
+                time.InnerText = gpxLine.EventTime.ToString("s") + "Z";
                 trkpt.AppendChild(time);
                 // Ohjelma ei osannut lukea tagia
                 //XmlNode speed = doc.CreateElement("speed");
@@ -70,16 +69,14 @@ namespace RaakadataLibrary
             rootNode.AppendChild(trk);
             //doc.Save(ConfigurationManager.AppSettings["gpxFile"]);
             doc.Save(path);
-
-            Console.WriteLine("Valmis ");
         }
-        private void writeHeader()
+        private void WriteHeader()
         {
             XmlDeclaration xmldecl = doc.CreateXmlDeclaration("1.0", "UTF-8", "yes");
             doc.InsertBefore(xmldecl, doc.FirstChild);
             
         }
-        private void writeMetaData()
+        private void WriteMetaData()
         {
             XmlNode metaData = doc.CreateElement("metadata");
             XmlNode metaDataLink = doc.CreateElement("link");
@@ -87,16 +84,16 @@ namespace RaakadataLibrary
             metadataLinkAttribute.Value = "www.baltic-instruments.com";
             metaDataLink.Attributes.Append(metadataLinkAttribute);
             XmlNode metaDataText = doc.CreateElement("text");
-            XmlNode metaDataAika = doc.CreateElement("time");
+            XmlNode metaDataTime = doc.CreateElement("time");
             metaDataText.InnerText = "GPX model trial";
             //metaDataAika.InnerText = "2019-09-28T11:30:43Z";
-            metaDataAika.InnerText = getRaceTimeFormatted();
+            metaDataTime.InnerText = GetRaceTimeFormatted();
             metaDataLink.AppendChild(metaDataText);
             metaData.AppendChild(metaDataLink);
-            metaData.AppendChild(metaDataAika);
+            metaData.AppendChild(metaDataTime);
             rootNode.AppendChild(metaData);
         }
-        private string getRaceTimeFormatted()
+        private string GetRaceTimeFormatted()
         {
             return metaDataRaceTime.ToString("s") + "Z";
         }

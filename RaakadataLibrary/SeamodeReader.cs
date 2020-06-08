@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace RaakadataLibrary
+namespace SeaMODEParcerLibrary
 {
     public class SeamodeReader
     {
@@ -27,23 +27,23 @@ namespace RaakadataLibrary
         private bool headersWritten = false;
         private readonly DateTime startTime;
         private readonly DateTime endTime;
-        public bool PastEnd { get; private set; } = false;
+        private bool pastEnd = false;
         private const string startPattern_c = "^SeaMODE_";
         private readonly string startPattern;
         private readonly string endPattern;
         private readonly CultureInfo cultureInfo = new CultureInfo("fi-FI");
         private int columnCount;
         // liian suuri ajanmuutos = virhe, mutta missä on raja?
-        private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(1);
+        private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(10);
         private DateTime? prevEventTime = null;
         private readonly string headerRowPattern = "^Date_PC(.*)Time_PC";
-        private char erotinChar = ';'; 
+        private char separatorChar = ';'; 
 
         public string TmpFile = Path.GetTempFileName();
-        public List<GpxLine> gpxLines { get; set; }
+        public List<GpxLine> GpxLines { get; set; }
         public int DataRowCount { get; private set; } = 0;
         public List<string> DataRowErrors { get; private set; }
-        public DateTime gpxRaceTime { get; private set;}
+        public DateTime GpxRaceTime { get; private set;}
         // jotta käyttöliittymä ei lukkiudu tiedoston luku ja kirjoituksen ajaksi
         public async Task ReadAndWriteFilesAsync(string path) => await Task.Run(() => ForeachFileIn(FetchFilesToRead(path)));
 
@@ -77,7 +77,7 @@ namespace RaakadataLibrary
             int len = example.Length;
             foreach (var fi in di.GetFiles())
             {
-                if (PastEnd)
+                if (pastEnd)
                     break;
                 if ((Regex.IsMatch(fi.Name, startPattern) || Regex.IsMatch(fi.Name, endPattern)) && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == len)
                     files.Add(fi.FullName);
@@ -98,7 +98,7 @@ namespace RaakadataLibrary
             using (StreamReader sr = File.OpenText(filePath))
             {
                 string row = "";
-                while ((row = sr.ReadLine()) != null && validFile && !PastEnd)
+                while ((row = sr.ReadLine()) != null && validFile && !pastEnd)
                 {
                     if (headersFound)
                     {
@@ -133,6 +133,14 @@ namespace RaakadataLibrary
                 if (!validFile)
                     DataRowErrors.Add($"There was something wrong with the xml section in file:\n{filePath}");
             }
+            if (!pastEnd)
+            {
+                TimeSpan timeDiff = endTime - (DateTime)prevEventTime;
+                if (timeDiff > TimeSpan.FromSeconds(1))
+                {
+                    DataRowErrors.Add($"Data logging ended {timeDiff:hh\\:mm\\:ss\\.f} before the specified endpoint.");
+                }
+            }
         }
 
         private void FileValidation(List<string> headerRows,
@@ -161,7 +169,7 @@ namespace RaakadataLibrary
                     {
                         separator[0] = headerMatch.Groups[1].ToString();
                         char[] chArray = separator[0].ToCharArray();
-                        erotinChar = chArray[0];
+                        separatorChar = chArray[0];
                         headersFound = true;
                     }
                     break;
@@ -170,7 +178,7 @@ namespace RaakadataLibrary
                 headerRows.Add(row);
         }
 
-        public void haeGpxData(string fileName)
+        public void FetchGPXData(string fileName)
         {
             string[] separator = { ";" };
             bool validFile = true;
@@ -199,20 +207,19 @@ namespace RaakadataLibrary
                         {
                             DateTime newDateTime;
                             // Tehdään gpx instanssin luonti sekunnin välein
-                            newDateTime = muodostoGpxAika(row);
-                           TimeSpan tp = newDateTime - prevDateTime;
+                            newDateTime = FormGPXTime(row);
+                            TimeSpan tp = newDateTime - prevDateTime;
                             if (tp.TotalSeconds >= 1)
                             {
-                                TeeGpx(row, columnCount, rowNum);
-                                prevDateTime = muodostoGpxAika(row);
+                                MakeGPX(row, columnCount, rowNum);
+                                prevDateTime = FormGPXTime(row);
                                 // Aloitusaika otsikolle
-                                if (gpxRaceTime == DateTime.MinValue)
+                                if (GpxRaceTime == DateTime.MinValue)
                                 {
-                                    gpxRaceTime = prevDateTime;
+                                    GpxRaceTime = prevDateTime;
                                 }
                             }
                         }
-
                     }
                     else
                     {
@@ -227,56 +234,52 @@ namespace RaakadataLibrary
             }
         }
 
-        private void TeeGpx(string luettuRivi, int columnCount, int rowNumber)
+        private void MakeGPX(string row, int columnCount, int rowNumber)
         {
-            if (gpxLines == null)
-                gpxLines = new List<GpxLine>();
+            if (GpxLines == null)
+                GpxLines = new List<GpxLine>();
 
-            string[] arvot = luettuRivi.Split(erotinChar);
+            string[] rowValues = row.Split(separatorChar);
             // Rivillä oltava sama määrä sarakkeita kuin otsikollakin
-            if(arvot.Length != columnCount)
+            if(rowValues.Length != columnCount)
             {
-                DataRowErrors.Add($"The number of columns {arvot.Length} in row {rowNumber} did not match to the headerline");
+                DataRowErrors.Add($"The number of columns {rowValues.Length} in row {rowNumber} did not match to the headerline");
                 return;
             }
-            DateTime aika;
+            DateTime time;
             try
             {
-                aika = DateTime.ParseExact(arvot[23] + " " + arvot[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
+                time = DateTime.ParseExact(rowValues[23] + " " + rowValues[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
             }
-            catch (System.IndexOutOfRangeException e)
+            catch (IndexOutOfRangeException)
             {
                 DataRowErrors.Add($"Parsing time at row {rowNumber} failed"); 
                 return;
             }
-            // Tarkistetaan longitue ja latitude
-            Boolean isCorrect = true;
-            if(!Regex.IsMatch(arvot[25], ConfigurationManager.AppSettings["patLatitude"]))
+            if(!Regex.IsMatch(rowValues[25], ConfigurationManager.AppSettings["patLatitude"]))
             {
                 DataRowErrors.Add($"Latitude at {rowNumber} empty or not in correct format");
-                isCorrect = false;
             }
-            if (!Regex.IsMatch(arvot[27], ConfigurationManager.AppSettings["patLongitude"]))
+            if (!Regex.IsMatch(rowValues[27], ConfigurationManager.AppSettings["patLongitude"]))
             {
                 DataRowErrors.Add($"Longitude at {rowNumber} empty or not in correct format");
-                isCorrect = false;
             }
             //GpxLine gpxLine = new GpxLine(aika, arvot[25], arvot[27], arvot[29]);  
             // Tarkistetaan latitude ja longitude
-            GpxLine gpxLine = new GpxLine(aika);
+            GpxLine gpxLine = new GpxLine(time);
 
-            gpxLine.setLatitude(arvot[25]);
-            gpxLine.latPosition = arvot[26];
-            gpxLine.setLongitude(arvot[27]);
-            gpxLine.longPosition = arvot[28];
-            gpxLines.Add(gpxLine);
+            gpxLine.SetLatitude(rowValues[25]);
+            gpxLine.LatPosition = rowValues[26];
+            gpxLine.SetLongitude(rowValues[27]);
+            gpxLine.LongPosition = rowValues[28];
+            GpxLines.Add(gpxLine);
         }
 
         private bool TimeValidation(string[] values)
         {
             // ensimmäisessä alkiossa pvm muodossa pp.kk.vvvv ja toisessa aika hh:mm:ss.nnn
             DateTime eventTime = DateTime.ParseExact(values[0] + " " + values[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
-            return (eventTime >= startTime && eventTime <= endTime) ? true : false;
+            return eventTime >= startTime && eventTime <= endTime;
         }
 
         // Tarkistetaan aika
@@ -286,7 +289,7 @@ namespace RaakadataLibrary
             DateTime eventTime = DateTime.ParseExact(values[0] + " " + values[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
             if (eventTime > endTime)
             {
-                PastEnd = true;
+                pastEnd = true;
                 return false;
             }
             else if (eventTime >= startTime && eventTime <= endTime)
@@ -304,21 +307,21 @@ namespace RaakadataLibrary
                 return false;
         }
 
-        private DateTime muodostoGpxAika(string luettuRivi)
+        private DateTime FormGPXTime(string luettuRivi)
         {
             // Väärä erotinmerkki
-            string[] arvot = luettuRivi.Split(erotinChar);
-            DateTime aika;
+            string[] values = luettuRivi.Split(separatorChar);
+            DateTime time;
             try
             {
-                aika = DateTime.ParseExact(arvot[23] + " " + arvot[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
+                time = DateTime.ParseExact(values[23] + " " + values[24], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
             }
-            catch (System.IndexOutOfRangeException e)
+            catch (IndexOutOfRangeException)
             {
                 // Laitetaan ajalle jokin outo arvo, jos rikkinäinen data
-                aika = DateTime.MinValue;
+                time = DateTime.MinValue;
             }
-            return aika;
+            return time;
         }
     }
 }

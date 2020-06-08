@@ -6,7 +6,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{C50B15A6-685F-4CBF-B21C-5B8E90E3E3B3}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>Raakadata</RootNamespace>
+    <RootNamespace>SeaMODEParcer</RootNamespace>
     <AssemblyName>SeaMode Parcer</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -126,9 +126,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\RaakadataLibrary\RaakadataLibrary.csproj">
+    <ProjectReference Include="..\RaakadataLibrary\SeaMODEParcerLibrary.csproj">
       <Project>{d5a4744a-d940-43ef-86b4-65ac10c8be94}</Project>
-      <Name>RaakadataLibrary</Name>
+      <Name>SeaMODEParcerLibrary</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

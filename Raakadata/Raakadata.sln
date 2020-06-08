@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29920.165
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raakadata", "Raakadata.csproj", "{C50B15A6-685F-4CBF-B21C-5B8E90E3E3B3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeaMODEParcer", "SeaMODEParcer.csproj", "{C50B15A6-685F-4CBF-B21C-5B8E90E3E3B3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaakadataLibrary", "..\RaakadataLibrary\RaakadataLibrary.csproj", "{D5A4744A-D940-43EF-86B4-65AC10C8BE94}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeaMODEParcerLibrary", "..\RaakadataLibrary\SeaMODEParcerLibrary.csproj", "{D5A4744A-D940-43EF-86B4-65AC10C8BE94}"
 EndProject
 Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "SeaMODE Parcer", "..\SeaMODE Parcer\SeaMODE Parcer.vdproj", "{1839E875-C3EB-4876-8E7E-6D757D8D076E}"
 EndProject
