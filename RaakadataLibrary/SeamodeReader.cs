@@ -27,7 +27,7 @@ namespace SeaMODEParcerLibrary
         private bool headersWritten = false;
         private readonly DateTime startTime;
         private readonly DateTime endTime;
-        private bool pastEnd = false;
+        public bool PastEnd { get; private set; } = false;
         private const string startPattern_c = "^SeaMODE_";
         private readonly string startPattern;
         private readonly string endPattern;
@@ -35,7 +35,7 @@ namespace SeaMODEParcerLibrary
         private int columnCount;
         // liian suuri ajanmuutos = virhe, mutta missä on raja?
         private TimeSpan maximumTimeStep = TimeSpan.FromSeconds(10);
-        private DateTime? prevEventTime = null;
+        public DateTime? PrevEventTime { get; private set; } = null;
         private readonly string headerRowPattern = "^Date_PC(.*)Time_PC";
         private char separatorChar = ';'; 
 
@@ -77,7 +77,7 @@ namespace SeaMODEParcerLibrary
             int len = example.Length;
             foreach (var fi in di.GetFiles())
             {
-                if (pastEnd)
+                if (PastEnd)
                     break;
                 if ((Regex.IsMatch(fi.Name, startPattern) || Regex.IsMatch(fi.Name, endPattern)) && Regex.IsMatch(fi.Name, ".csv$") && fi.Name.Length == len)
                     files.Add(fi.FullName);
@@ -98,7 +98,7 @@ namespace SeaMODEParcerLibrary
             using (StreamReader sr = File.OpenText(filePath))
             {
                 string row = "";
-                while ((row = sr.ReadLine()) != null && validFile && !pastEnd)
+                while ((row = sr.ReadLine()) != null && validFile && !PastEnd)
                 {
                     if (headersFound)
                     {
@@ -132,14 +132,6 @@ namespace SeaMODEParcerLibrary
                 }
                 if (!validFile)
                     DataRowErrors.Add($"There was something wrong with the xml section in file:\n{filePath}");
-            }
-            if (!pastEnd)
-            {
-                TimeSpan timeDiff = endTime - (DateTime)prevEventTime;
-                if (timeDiff > TimeSpan.FromSeconds(1))
-                {
-                    DataRowErrors.Add($"Data logging ended {timeDiff:hh\\:mm\\:ss\\.f} before the specified endpoint.");
-                }
             }
         }
 
@@ -289,18 +281,18 @@ namespace SeaMODEParcerLibrary
             DateTime eventTime = DateTime.ParseExact(values[0] + " " + values[1], "dd.MM.yyyy HH:mm:ss.fff", cultureInfo);
             if (eventTime > endTime)
             {
-                pastEnd = true;
+                PastEnd = true;
                 return false;
             }
             else if (eventTime >= startTime && eventTime <= endTime)
             {
-                if (prevEventTime != null && eventTime - prevEventTime > maximumTimeStep)
+                if (PrevEventTime != null && eventTime - PrevEventTime > maximumTimeStep)
                 {
                     DataRowErrors.Add($"There was a large time difference between row {rowNum} and the previous row.");
-                    prevEventTime = eventTime;
+                    PrevEventTime = eventTime;
                     return false;
                 }
-                prevEventTime = eventTime;
+                PrevEventTime = eventTime;
                 return true;
             }
             else

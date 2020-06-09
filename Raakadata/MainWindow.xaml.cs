@@ -484,6 +484,14 @@ namespace SeaMODEParcer
             // Ilmoitus luonnista ja mahdolliset virheet.
             StringBuilder msg = new StringBuilder();
             msg.AppendLine($"File {fullFilePath} was created.");
+            if (!sr.PastEnd && sr.PrevEventTime != null)
+            {
+                TimeSpan timeDiff = eventEnd - (DateTime)sr.PrevEventTime;
+                if (timeDiff > TimeSpan.FromSeconds(1))
+                {
+                    msg.AppendLine($"Data logging ended {timeDiff:hh\\:mm\\:ss\\.f} before the specified endpoint.");
+                }
+            }
             foreach (string line in sr.DataRowErrors)
             {
                 msg.AppendLine(line);
