@@ -288,8 +288,18 @@ namespace SeaMODEParcerLibrary
             {
                 if (PrevEventTime != null && eventTime - PrevEventTime > maximumTimeStep)
                 {
-                    DataRowErrors.Add($"There was a large time difference between row {rowNum} and the previous row.");
+                    string errMsg;
+                    if (rowNum == 14)
+                    {
+                        errMsg = "Parsing stopped due to a large time step between files.";
+                    }
+                    else
+                    {
+                        errMsg = $"Parsing stopped due to a large time step to row {rowNum}.";
+                    }
+                    DataRowErrors.Add(errMsg);
                     PrevEventTime = eventTime;
+                    PastEnd = true;
                     return false;
                 }
                 PrevEventTime = eventTime;
