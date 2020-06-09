@@ -676,8 +676,12 @@ namespace SeaMODEParcer
             dpEventEndDate.DisplayDate = DateTime.Today;
             tbEventStartTime.TextChanged -= TbTime_TextChanged;
             tbEventEndTime.TextChanged -= TbTime_TextChanged;
+            tbEventStartTime.SelectionChanged -= TbTime_SelectionChanged;
+            tbEventEndTime.SelectionChanged -= TbTime_SelectionChanged;
             tbEventStartTime.Text = timePlacehoder;
             tbEventEndTime.Text = timePlacehoder;
+            tbEventStartTime.SelectionChanged += TbTime_SelectionChanged;
+            tbEventEndTime.SelectionChanged += TbTime_SelectionChanged;
             tbEventStartTime.TextChanged += TbTime_TextChanged;
             tbEventEndTime.TextChanged += TbTime_TextChanged;
             prevCaretIndex[tbEventStartTime] = -1;
@@ -686,8 +690,6 @@ namespace SeaMODEParcer
             prevText[tbEventEndTime] = tbEventEndTime.Text;
             minDTs.Clear();
             maxDTs.Clear();
-            tbEventStartTime.Text = timePlacehoder;
-            tbEventEndTime.Text = timePlacehoder;
             tbEventName.Clear();
             dpEventStartDate.ClearValue(BorderBrushProperty);
             dpEventEndDate.ClearValue(BorderBrushProperty);
@@ -1271,6 +1273,8 @@ namespace SeaMODEParcer
                 tbEventEndTime.TextChanged -= TbTime_TextChanged;
                 tbEventStartTime.SelectionChanged -= TbTime_SelectionChanged;
                 tbEventEndTime.SelectionChanged -= TbTime_SelectionChanged;
+                tbEventStartTime.ClearValue(BorderBrushProperty);
+                tbEventEndTime.ClearValue(BorderBrushProperty);
 
                 tbEventStartTime.Text = $"{minDate:HH':'mm':'ss}";
                 if (isModified[tbEventStartTime] != false)
